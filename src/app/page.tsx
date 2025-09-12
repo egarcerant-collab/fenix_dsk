@@ -5,19 +5,14 @@ import * as XLSX from 'xlsx';
 import { AppHeader } from '@/components/app-header';
 import { FileUploader } from '@/components/file-uploader';
 import { DataTable } from '@/components/data-table';
-import { SummaryCard } from '@/components/summary-card';
-import { getColumnSummaries } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { FileJson, RotateCcw, Upload } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import type { SummarizeColumnsOutput } from '@/ai/flows/column-summarization';
+import { FileJson, RotateCcw } from 'lucide-react';
 
 type Row = Record<string, string | number | boolean | null>;
 
 export default function Home() {
   const [fileData, setFileData] = React.useState<{ headers: string[]; rows: Row[] } | null>(null);
-  const [summaries, setSummaries] = React.useState<SummarizeColumnsOutput | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [filters, setFilters] = React.useState<Record<string, string>>({});
   const { toast } = useToast();
@@ -50,24 +45,6 @@ export default function Home() {
         });
 
         setFileData({ headers, rows });
-        
-        const columnValues = headers.map(header => 
-          rows.map(row => String(row[header] ?? ''))
-        );
-        
-        const isNumeric = (val: any) => val !== null && val !== '' && !isNaN(Number(val));
-        const columnDataTypes = headers.map((header, i) => {
-            const sample = rows.slice(0, 10).map(row => row[header]);
-            return sample.some(val => val !== null && typeof val === 'string' && !isNumeric(val)) ? 'categorical' : 'numeric';
-        });
-
-        const summaryResult = await getColumnSummaries({
-          columnNames: headers,
-          columnValues: columnValues,
-          columnDataTypes: columnDataTypes,
-        });
-        setSummaries(summaryResult);
-
       } catch (error) {
         console.error(error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
@@ -128,7 +105,6 @@ export default function Home() {
 
   const handleReset = () => {
     setFileData(null);
-    setSummaries(null);
     setFilters({});
     setIsLoading(false);
   };
@@ -152,21 +128,6 @@ export default function Home() {
                 <Button onClick={handleExport}><FileJson className="mr-2 h-4 w-4" />Export JSON</Button>
             </div>
           </div>
-          
-          <section>
-            <h3 className="text-xl font-semibold mb-4">Column Summaries</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {isLoading && !summaries ? (
-                 fileData.headers.map(header => (
-                    <Skeleton key={header} className="h-40 rounded-lg" />
-                 ))
-              ) : (
-                summaries?.map((summary) => (
-                    <SummaryCard key={summary.columnName} title={summary.columnName} content={summary.summary} />
-                ))
-              )}
-            </div>
-          </section>
 
           <section>
              <h3 className="text-xl font-semibold mb-4">Data Explorer</h3>

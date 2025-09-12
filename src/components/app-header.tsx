@@ -9,7 +9,7 @@ export function AppHeader() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary">XLS Detective</h1>
         <p className="text-muted-foreground">
-          Upload an Excel file to get instant AI-powered insights.
+          Upload an Excel file to explore its data.
         </p>
       </div>
     </header>
