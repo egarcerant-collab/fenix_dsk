@@ -44,6 +44,7 @@ export default function ClientPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
+  const [selectedDpto, setSelectedDpto] = useState<string>('all');
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -245,6 +246,11 @@ export default function ClientPage() {
     Total: { label: 'Total', color: 'hsl(var(--muted))' },
   };
 
+  const departamentos = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.dpto))] : [];
+
+  const filteredGroupedData = lastResults?.groupedData.filter(g => selectedDpto === 'all' || g.keys.dpto === selectedDpto);
+
+
   return (
     <>
       <Script
@@ -268,7 +274,7 @@ export default function ClientPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Cargue y Configuración</CardTitle>
-              <CardDescription>Seleccione el archivo de datos y el período a analizar. La población HTA y DM se cruzará con el archivo `POBLACION_2.csv` del servidor.</CardDescription>
+              <CardDescription>Seleccione el archivo de datos y el período a analizar. La población HTA y DM se cruzará con el archivo <code>POBLACION_2.csv</code> del servidor.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
@@ -368,7 +374,7 @@ export default function ClientPage() {
                                         </div>
                                         <p className="text-xs text-muted-foreground mt-2">{description}</p>
                                     </Card>
-                                ))}
+                               ))}
                             </div>
                         </div>
                     </CardContent>
@@ -376,8 +382,25 @@ export default function ClientPage() {
 
                  <Card>
                   <CardHeader>
-                    <CardTitle>Tabla de Indicadores Consolidados</CardTitle>
-                    <CardDescription>Resultados agrupados por Departamento, Municipio e IPS de seguimiento.</CardDescription>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <CardTitle>Tabla de Indicadores Consolidados</CardTitle>
+                        <CardDescription>Resultados agrupados por Departamento, Municipio e IPS de seguimiento.</CardDescription>
+                      </div>
+                      <div className="w-full sm:w-auto sm:min-w-[200px]">
+                        <Select value={selectedDpto} onValueChange={setSelectedDpto}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Filtrar por Departamento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos los Departamentos</SelectItem>
+                            {departamentos.map(dpto => (
+                              <SelectItem key={dpto} value={dpto}>{dpto}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="w-full overflow-auto max-h-[600px] border rounded-md">
@@ -406,7 +429,7 @@ export default function ClientPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {lastResults.groupedData && lastResults.groupedData.map((g, index) => {
+                          {filteredGroupedData && filteredGroupedData.map((g, index) => {
                             const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
                             const poblacionDM = g.results.POBLACION_DM_TOTAL;
                             const denominadorDM = g.results.DENOMINADOR_DM_CONTROLADOS;
@@ -564,8 +587,8 @@ export default function ClientPage() {
                                       {issues.cats.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row[1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
                                       {issues.cats.length > 100 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Mostrando 100 de {issues.cats.length}.</TableCell></TableRow>}
                                     </TableBody>
-                                  </Table>
-                                </div>
+                                 </Table>
+                               </div>
                              </AccordionContent>
                           </AccordionItem>
                         </Accordion>
@@ -578,9 +601,3 @@ export default function ClientPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
