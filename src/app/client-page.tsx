@@ -171,23 +171,42 @@ export default function ClientPage() {
     const a = document.createElement('a'); a.href = url; a.download = 'resultados_indicadores.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
-  const kpiEntries = [
-    { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
+  const formatPercent = (value: number) => {
+    if (value === 0) return '0%';
+    if (!value || !Number.isFinite(value)) return 'N/A';
+    return `${(value * 100).toFixed(1)}%`;
+  }
+  
+  const kpis = lastResults?.R;
+  
+  const kpiEntries = kpis ? [
     { label: 'HTA Controlado', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) con PA < 140/90.' },
-    { label: 'Población HTA', key: 'DENOMINADOR_HTA_MENORES', description: 'Total de pacientes con diagnóstico de HTA según archivo de población.' },
-    { label: 'HTA MENORES DE 60 AÑOS', key: 'DENOMINADOR_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
-    { label: 'Diagnóstico confirmado de HTA sin MAYORES DE 60 AÑOS', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (≥60a, sin DM) del archivo cargado.' },
-    { label: 'Población DM (Población)', key: 'POBLACION_DM_TOTAL', description: 'Total de pacientes con diagnóstico de DM según archivo de población.' },
-    { label: 'Pacientes con DM (Archivo)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
-    { label: 'DM Controlado', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c < 7%.' },
+    { label: 'Población HTA (Total)', key: 'DENOMINADOR_HTA_MENORES', description: 'Total de pacientes con diagnóstico de HTA según archivo de población.' },
+    { label: 'Resultado HTA', key: 'RESULTADO_HTA', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES > 0 ? kpis.NUMERADOR_HTA / kpis.DENOMINADOR_HTA_MENORES : 0), description: '(Numerador HTA / Población HTA)' },
+    
+    { label: 'HTA Controlado (<60 años)', key: 'NUMERADOR_HTA_MENORES', description: 'Pacientes HTA (18-59a) con PA < 140/90.' },
+    { label: 'Población HTA (<60 años)', key: 'DENOMINADOR_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
+    { label: 'Resultado HTA (<60 años)', key: 'RESULTADO_HTA_MENORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? kpis.NUMERADOR_HTA_MENORES / kpis.DENOMINADOR_HTA_MENORES_ARCHIVO : 0), description: '(Numerador HTA <60 / Denominador HTA <60)' },
+
+    { label: 'HTA Controlado (≥60 años)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (≥60a, sin DM) con PA < 150/90.' },
+    { label: 'Población HTA (≥60 años)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (≥60a, sin DM) del archivo cargado.' },
+    { label: 'Resultado HTA (≥60 años)', key: 'RESULTADO_HTA_MAYORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador HTA ≥60 / Denominador HTA ≥60)' },
+    
     { label: 'Pacientes DM (18-69a)', key: 'NUMERADOR_DM', description: 'Total pacientes DM (18-69a) encontrados en el archivo.' },
+    { label: 'Población DM (Total)', key: 'POBLACION_DM_TOTAL', description: 'Total de pacientes con diagnóstico de DM según archivo de población.' },
+    { label: 'Resultado DM (Pob)', key: 'RESULTADO_DM_POB', isPercentage: true, value: formatPercent(kpis.POBLACION_DM_TOTAL > 0 ? kpis.NUMERADOR_DM / kpis.POBLACION_DM_TOTAL : 0), description: '(Numerador DM / Población DM Total)' },
+    
+    { label: 'DM Controlado', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c < 7%.' },
+    { label: 'Pacientes con DM (Archivo)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
+    { label: 'Resultado DM Control', key: 'RESULTADO_DM_CONTROL', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_DM_CONTROLADOS / kpis.DENOMINADOR_DM_CONTROLADOS : 0), description: '(Numerador DM Control / Denominador DM Control)' },
+
+    { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
     { label: 'Creatinina Tomada (DM)', key: 'NUMERADOR_CREATININA', description: 'Pacientes DM con creatinina en últimos 12 meses.' },
     { label: 'HbA1c Tomada (DM)', key: 'NUMERADOR_HBA1C', description: 'Pacientes DM con HbA1c en últimos 6 meses.' },
     { label: 'Microalbuminuria Tomada (DM)', key: 'NUMERADOR_MICROALBUMINURIA', description: 'Pacientes DM con microalbuminuria en últimos 12 meses.' },
     { label: 'Inasistentes a Control', key: 'NUMERADOR_INASISTENTE', description: 'Pacientes con fecha de PA registrada pero fuera de los últimos 6 meses.' },
-  ];
-  
-  const kpis = lastResults?.R;
+  ] : [];
+
   const issues = lastResults?.issues || { dates: [], nums: [], cats: [] };
 
   const chartDataHTA = kpis ? [
@@ -202,12 +221,6 @@ export default function ClientPage() {
     Controlados: { label: 'Controlados', color: 'hsl(var(--primary))' },
     Total: { label: 'Total', color: 'hsl(var(--muted))' },
   };
-
-  const formatPercent = (value: number) => {
-    if (value === 0) return '0%';
-    if (!value || !Number.isFinite(value)) return 'N/A';
-    return `${(value * 100).toFixed(1)}%`;
-  }
 
   return (
     <>
@@ -305,11 +318,11 @@ export default function ClientPage() {
                         <CardDescription>Resumen de los KPIs calculados para todo el archivo.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                             {kpiEntries.map(({ label, key, description }) => (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                             {kpiEntries.map(({ label, key, description, isPercentage, value }) => (
                                 <Card key={key} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                     <div>
-                                       <p className="text-4xl font-bold text-primary">{(kpis as any)[key] ?? 0}</p>
+                                       <p className="text-4xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
                                        <p className="text-sm font-semibold mt-1">{label}</p>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-2">{description}</p>
@@ -523,5 +536,7 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
 
     
