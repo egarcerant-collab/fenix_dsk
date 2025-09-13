@@ -27,6 +27,13 @@ export interface InformeDatos {
   };
 }
 
+export interface PdfImages {
+  header: string;
+  footer: string;
+  background: string;
+}
+
+
 // ------------------------------------------------------------
 // (Opcional) Registrar Arial. Sustituye las constantes con tus TTF en base64.
 // Si no las defines, pdfmake usará Roboto y todo seguirá funcionando.
@@ -57,21 +64,20 @@ export async function registerArialIfAvailable(pdfMake: any) {
 }
 
 // ------------------------------------------------------------
-export function buildDocDefinition(data: InformeDatos): any {
+export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any {
   const h = (t: string) => ({ text: t, style: "h1", margin: [0, 10, 0, 4] });
   const p = (t: Texto) => ({ text: t as any, style: "p", margin: [0, 0, 0, 4] });
 
-  return {
+  const docDefinition: any = {
     pageSize: "A4",
-    pageMargins: [40, 48, 40, 48], // izq, sup, der, inf
+    pageMargins: [40, 60, 40, 60], // izq, sup, der, inf
     info: {
       title: "Evaluación de Indicadores – Gestión del Riesgo",
       author: "Dirección del Riesgo en Salud",
       subject: "Informe de evaluación HTA/DM/Gestantes",
       keywords: "salud pública, riesgo, indicadores, HTA, DM",
     },
-    // Si registraste Arial arriba, cámbialo a 'Arial'
-    defaultStyle: { fontSize: 12, lineHeight: 1.2, font: "Roboto" },
+    defaultStyle: { fontSize: 12, lineHeight: 1.2, font: "Roboto", alignment: 'justify' },
     styles: {
       h1: { bold: true, fontSize: 12 },
       h2: { bold: true, fontSize: 12, margin: [0, 8, 0, 4] },
@@ -157,10 +163,42 @@ export function buildDocDefinition(data: InformeDatos): any {
         : {},
     ],
   };
+
+  if(images) {
+    if (images.background) {
+      docDefinition.background = {
+        image: images.background,
+        width: 100,
+        alignment: 'right',
+        margin: [0, 0, 20, 0]
+      };
+    }
+    if(images.header) {
+        docDefinition.header = {
+            image: images.header,
+            width: 150,
+            alignment: 'right',
+            margin: [0, 20, 40, 0]
+        };
+    }
+    if(images.footer) {
+        docDefinition.footer = {
+            image: images.footer,
+            width: 595, // A4 width
+            height: 50,
+            margin: [0, 0, 0, 0]
+        };
+    }
+  }
+  return docDefinition;
 }
 
 // ------------------------------------------------------------
-export async function descargarInformePDF(datos: InformeDatos, nombre = "Informe_Evaluacion_Riesgo.pdf") {
+export async function descargarInformePDF(
+  datos: InformeDatos,
+  images?: PdfImages,
+  nombre = "Informe_Evaluacion_Riesgo.pdf"
+) {
   // Import dinámico para evitar problemas de SSR en Next/Firebase Studio
   const pdfMake = (await import("pdfmake/build/pdfmake")).default;
   const vfsFonts = (await import("pdfmake/build/vfs_fonts")).default;
@@ -171,8 +209,6 @@ export async function descargarInformePDF(datos: InformeDatos, nombre = "Informe
   // Registrar Arial si proporcionaste las TTF en base64
   await registerArialIfAvailable(pdfMake);
 
-  const docDef = buildDocDefinition(datos);
+  const docDef = buildDocDefinition(datos, images);
   pdfMake.createPdf(docDef).download(nombre);
 }
-
-    

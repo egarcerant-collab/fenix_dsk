@@ -29,14 +29,14 @@ const reportGenerationPrompt = ai.definePrompt({
         - Total rows in the processed file: {{results.R.TOTAL_FILAS}}
         - Total HTA Population (from population file): {{results.R.DENOMINADOR_HTA_MENORES}}
         - Total DM Population (from population file): {{results.R.POBLACION_DM_TOTAL}}
-        - HTA patients found in file: {{results.R.NUMERADOR_HTA}}
-        - DM patients found in file: {{results.R.NUMERADOR_DM}}
-        - Patients with creatinine test in last 12m: {{results.R.NUMERADOR_CREATININA}}
-        - Patients with creatinine date recorded: {{results.R.DENOMINADOR_CREATININA}}
-        - Patients with HbA1c test in last 6m: {{results.R.NUMERADOR_HBA1C}}
-        - Patients with microalbuminuria test in last 12m: {{results.R.NUMERADOR_MICROALBUMINURIA}}
-        - DM patients with HbA1c < 7%: {{results.R.NUMERADOR_DM_CONTROLADOS}}
-        - Total DM patients in file: {{results.R.DENOMINADOR_DM_CONTROLADOS}}
+        - HTA patients found in file (18-69y): {{results.R.NUMERADOR_HTA}}
+        - DM patients found in file (18-69y): {{results.R.NUMERADOR_DM}}
+        - HTA patients <60 controlled: {{results.R.NUMERADOR_HTA_MENORES}} out of {{results.R.DENOMINADOR_HTA_MENORES_ARCHIVO}}
+        - HTA patients >=60 controlled: {{results.R.NUMERADOR_HTA_MAYORES}} out of {{results.R.DENOMINADOR_HTA_MAYORES}}
+        - DM patients with HbA1c < 7%: {{results.R.NUMERADOR_DM_CONTROLADOS}} out of {{results.R.DENOMINADOR_DM_CONTROLADOS}}
+        - Patients with creatinine test in last 12m: {{results.R.NUMERADOR_CREATININA}} out of {{results.R.DENOMINADOR_CREATININA}}
+        - Patients with HbA1c test in last 6m: {{results.R.NUMERADOR_HBA1C}} out of {{results.R.DENOMINADOR_DM_CONTROLADOS}}
+        - Patients with microalbuminuria test in last 12m: {{results.R.NUMERADOR_MICROALBUMINURIA}} out of {{results.R.DENOMINADOR_DM_CONTROLADOS}}
         - Patients with follow-up absence: {{results.R.NUMERADOR_INASISTENTE}}
         - Missing columns in the file: {{#if results.R.FALTANTES_ENCABEZADOS}}Presenta {{results.R.FALTANTES_ENCABEZADOS.length}} columnas faltantes: {{#each results.R.FALTANTES_ENCABEZADOS}}- {{this}} {{/each}}{{else}}No se encontraron columnas faltantes.{{/if}}
         - Data quality issues (count): Dates={{results.issues.dates.length}}, Nums={{results.issues.nums.length}}, Cats={{results.issues.cats.length}}
@@ -59,8 +59,9 @@ const reportGenerationPrompt = ai.definePrompt({
 
         4.  **specificObservations**: HTML format. State the compliance level (e.g., "incumplimiento crítico", "cumplimiento bajo", "cumplimiento aceptable", "cumplimiento bueno") for each area and *justify it with data*.
             - Patient Capture (Captación): Justify based on the gap between reported patients vs. expected population.
-            - HTA Control: Justify using the HTA control results (e.g., "El control de HTA en mayores de 60 es bajo, con solo X de Y pacientes cumpliendo la meta").
-            - DM Control: Justify using the DM control results (e.g., "El control de DM es crítico, con solo un Z% de pacientes con HbA1c < 7%").
+            - HTA Control (<60 years): Justify using the HTA control results for this group ({{results.R.NUMERADOR_HTA_MENORES}} / {{results.R.DENOMINADOR_HTA_MENORES_ARCHIVO}}).
+            - HTA Control (>=60 years): Justify using the HTA control results for this group ({{results.R.NUMERADOR_HTA_MAYORES}} / {{results.R.DENOMINADOR_HTA_MAYORES}}).
+            - DM Control (HbA1c): Justify using the DM control results ({{results.R.NUMERADOR_DM_CONTROLADOS}} / {{results.R.DENOMINADOR_DM_CONTROLADOS}}).
             - Screening (Tamizaje): Justify for Creatinine, HbA1c, and microalbuminuria, comparing the numerator vs. the relevant denominator. For example, "El tamizaje de creatinina es insuficiente, cubriendo solo a {{results.R.NUMERADOR_CREATININA}} de {{results.R.DENOMINADOR_CREATININA}} pacientes con fecha registrada."
 
         5.  **actions**: HTML format. Generate a detailed, prioritized list of commitments and actions based on the specific observations.

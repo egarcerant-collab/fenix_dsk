@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
@@ -22,6 +21,7 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
 import JSZip from 'jszip';
 import { descargarInformePDF, buildDocDefinition, InformeDatos } from '@/lib/informe-riesgo-pdf';
+import { loadImageAsBase64 } from '@/lib/image-loader';
 
 
 // Make XLSX global if it's loaded from a script
@@ -126,8 +126,11 @@ export default function ClientPage() {
     const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
     const analysisDate = new Date();
 
-    const parseAIContent = (content: string): string[] => {
-      return content.replace(/<\/?p>/g, '\n').replace(/<\/?ul>/g, '').split('<li>').map(s => s.replace(/<\/li>/g, '').trim()).filter(Boolean);
+    const parseAIContent = (content: string): any[] => {
+        if (!content) return [];
+        const cleanContent = content.replace(/<\/?p>|<\/?ul>|<\/?li>/g, '\n').trim();
+        const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
+        return items;
     };
 
     return {
@@ -210,7 +213,13 @@ export default function ClientPage() {
         
         const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio);
         
-        await descargarInformePDF(datosInforme);
+        const [headerImg, footerImg, backgroundImg] = await Promise.all([
+          loadImageAsBase64('/imagenes pdf/IMAGENES PARA PDF.jpg'),
+          loadImageAsBase64('/imagenes pdf/PIE DE PAGINA.jpg'),
+          loadImageAsBase64('/imagenes pdf/DERECHA.jpg')
+        ]);
+        
+        await descargarInformePDF(datosInforme, { header: headerImg, footer: footerImg, background: backgroundImg });
 
     } catch (error) {
         console.error("Error generando el PDF:", error);
@@ -240,12 +249,19 @@ export default function ClientPage() {
         actions: "<p>Compromisos y acciones por definir.</p>",
     };
     
-    // Dynamically import pdfmake for bulk generation
     const pdfMake = (await import("pdfmake/build/pdfmake")).default;
     const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
     pdfMake.vfs = pdfFonts;
     
     try {
+        const [headerImg, footerImg, backgroundImg] = await Promise.all([
+          loadImageAsBase64('/imagenes pdf/IMAGENES PARA PDF.jpg'),
+          loadImageAsBase64('/imagenes pdf/PIE DE PAGINA.jpg'),
+          loadImageAsBase64('/imagenes pdf/DERECHA.jpg')
+        ]);
+      
+        const images = { header: headerImg, footer: footerImg, background: backgroundImg };
+      
         const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
 
         for (const group of uniqueGroups) {
@@ -260,7 +276,7 @@ export default function ClientPage() {
 
             const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio);
             
-            const docDefinition = buildDocDefinition(reportData);
+            const docDefinition = buildDocDefinition(reportData, images);
 
             const pdfDoc = pdfMake.createPdf(docDefinition);
 
@@ -601,7 +617,7 @@ export default function ClientPage() {
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
                                            <p className="text-2xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
-                                           <p className="font-semibold mt-1">{label}</p>
+                                           <p className="font-semibold mt-1">{label.replace(/<|>/g, (char) => (char === '<' ? '<' : '>'))}</p>
                                         </div>
                                         <p className="text-muted-foreground mt-2">{description}</p>
                                     </Card>
@@ -859,17 +875,3 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
-
-
-    
-
-    
-
-
-
-
-    
-
-    
-
-    
