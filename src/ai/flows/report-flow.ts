@@ -18,9 +18,9 @@ const reportGenerationPrompt = ai.definePrompt({
     input: { schema: ReportRequestSchema },
     output: { schema: AIContentSchema },
     prompt: `
-        You are an expert health risk analyst. Your task is to generate the narrative sections for a health indicator evaluation report based on the provided data.
+        You are an expert health risk analyst. Your task is to generate a robust and detailed narrative for a health indicator evaluation report based on the provided data.
         The report evaluates performance on Hypertension (HTA) and Diabetes (DM) management.
-        The tone should be formal, objective, and constructive.
+        The tone should be formal, objective, analytical, and constructive.
         The output must be in Spanish.
 
         DATA PROVIDED:
@@ -38,21 +38,35 @@ const reportGenerationPrompt = ai.definePrompt({
         - DM patients with HbA1c < 7%: {{results.R.NUMERADOR_DM_CONTROLADOS}}
         - Total DM patients in file: {{results.R.DENOMINADOR_DM_CONTROLADOS}}
         - Patients with follow-up absence: {{results.R.NUMERADOR_INASISTENTE}}
-        - Missing columns in the file: {{#each results.R.FALTANTES_ENCABEZADOS}}- {{this}} {{/each}}
+        - Missing columns in the file: {{#if results.R.FALTANTES_ENCABEZADOS}}Presenta {{results.R.FALTANTES_ENCABEZADOS.length}} columnas faltantes: {{#each results.R.FALTANTES_ENCABEZADOS}}- {{this}} {{/each}}{{else}}No se encontraron columnas faltantes.{{/if}}
         - Data quality issues (count): Dates={{results.issues.dates.length}}, Nums={{results.issues.nums.length}}, Cats={{results.issues.cats.length}}
 
-        GENERATE THE FOLLOWING SECTIONS (use HTML paragraphs <p> for sections that require it):
+        GENERATE THE FOLLOWING SECTIONS (use HTML paragraphs <p> and lists <ul><li>...</li></ul> where appropriate for clarity and structure):
 
         1.  **reference**: A single paragraph. Start with "Posterior al análisis de la información reportada en la Data de Enfermedades Precursoras (HTA y DM) con corte a {{corte.monthName}} de {{corte.year}}, se realiza la evaluación de indicadores de gestión del riesgo por componente."
             Briefly state whether the analysis is for a specific entity or consolidated.
 
-        2.  **summary**: HTML format. A summary of key findings. Compare reported patients vs. expected population. Mention total patients in the file, distribution (HTA, DM), adherence issues (absences), and if key lab tests (TFG, creatinina, HbA1c) are missing or not filled.
+        2.  **summary**: HTML format. Generate a comprehensive summary of key findings.
+            - Compare the number of reported patients ({{results.R.NUMERADOR_HTA}} HTA, {{results.R.NUMERADOR_DM}} DM) with the expected population ({{results.R.DENOMINADOR_HTA_MENORES}} HTA, {{results.R.POBLACION_DM_TOTAL}} DM). Calculate and emphasize the capture gap or percentage.
+            - Mention the total number of patients in the file ({{results.R.TOTAL_FILAS}}) and their distribution (HTA, DM).
+            - Highlight key adherence issues, like follow-up absences ({{results.R.NUMERADOR_INASISTENTE}} patients) and comment on its significance relative to the total file rows.
+            - Briefly mention if key lab tests (TFG, creatinina, HbA1c) are missing or have low completion rates, providing a preview of the data quality issues.
 
-        3.  **dataQuality**: HTML format. Describe data quality opportunities based on missing columns and issue counts. Mention missing labs, lack of follow-up dates, empty cells, inconsistent data vs. clinical history, etc. Be concise and direct.
+        3.  **dataQuality**: HTML format. Provide a detailed description of data quality opportunities.
+            - Go beyond just listing the missing columns. Explain the *impact* of missing columns like '{{results.R.FALTANTES_ENCABEZADOS.[0]}}' on the analysis (e.g., "La ausencia de la columna de creatinina impide calcular el tamizaje renal...").
+            - Comment on the number of data issues found (dates, numbers, categories) and provide examples of what these issues imply (e.g., "Se encontraron {{results.issues.dates.length}} fechas inválidas, lo que sugiere errores de digitación o formatos incorrectos que dificultan el seguimiento cronológico.").
+            - Mention other common quality issues like empty cells, inconsistent data vs. clinical history, etc. Be specific and direct, framing them as "oportunidades de mejora".
 
-        4.  **specificObservations**: HTML format. State the compliance level (e.g., "incumplimiento", "cumplimiento bajo", "cumplimiento aceptable") for: Creatinine screening, HTA control, DM control, other screenings (HbA1c, microalbuminuria), and patient capture (captación).
+        4.  **specificObservations**: HTML format. State the compliance level (e.g., "incumplimiento crítico", "cumplimiento bajo", "cumplimiento aceptable", "cumplimiento bueno") for each area and *justify it with data*.
+            - Patient Capture (Captación): Justify based on the gap between reported patients vs. expected population.
+            - HTA Control: Justify using the HTA control results (e.g., "El control de HTA en mayores de 60 es bajo, con solo X de Y pacientes cumpliendo la meta").
+            - DM Control: Justify using the DM control results (e.g., "El control de DM es crítico, con solo un Z% de pacientes con HbA1c < 7%").
+            - Screening (Tamizaje): Justify for Creatinine, HbA1c, and microalbuminuria, comparing the numerator vs. the relevant denominator. For example, "El tamizaje de creatinina es insuficiente, cubriendo solo a {{results.R.NUMERADOR_CREATININA}} de {{results.R.DENOMINADOR_CREATININA}} pacientes con fecha registrada."
 
-        5.  **actions**: HTML format. A list of commitments and actions. Include: guaranteeing annual creatinine/semestral HbA1c, following up on absentees, ensuring specialist evaluations (psychology, nutrition, internal medicine, ophthalmology), improving data entry quality, and active patient search.
+        5.  **actions**: HTML format. Generate a detailed, prioritized list of commitments and actions based on the specific observations.
+            - For each observation, suggest a concrete action. Example: For low patient capture, suggest "Implementar estrategias de búsqueda activa de pacientes con diagnóstico de HTA y DM que no se encuentran en el programa."
+            - Include actions for improving data quality, such as "Realizar capacitaciones al personal sobre el correcto diligenciamiento de la data, enfatizando la importancia de los campos de laboratorio y fechas."
+            - Structure the recommendations as a numbered or bulleted list for clarity. Ensure actions are actionable and directly linked to the problems identified.
     `,
 });
 
@@ -71,4 +85,3 @@ const reportGenerationFlow = ai.defineFlow(
     return output;
   }
 );
-
