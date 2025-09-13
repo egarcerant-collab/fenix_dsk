@@ -16,15 +16,12 @@ import Script from 'next/script';
 import { DataProcessingResult, GroupedResult } from '@/lib/data-processing';
 import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
-import { ReportData, AIContent } from '@/ai/schemas';
+import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
-import PdfViewer from '@/components/pdf-viewer';
-import PdfContent from '@/components/pdf-content';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
+import { descargarInformePDF, buildDocDefinition, InformeDatos } from '@/lib/informe-riesgo-pdf';
 
 
 // Make XLSX global if it's loaded from a script
@@ -54,10 +51,7 @@ export default function ClientPage() {
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
   const [selectedDpto, setSelectedDpto] = useState<string>('all');
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
-  const [pdfReportData, setPdfReportData] = useState<ReportData | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -122,6 +116,52 @@ export default function ClientPage() {
      startProcessing(processLocalTestFile(Number(selectedYear), Number(selectedMonth)));
  }
 
+ const mapToInformeDatos = (
+    resultsForPdf: DataProcessingResult,
+    aiContent: AIContent,
+    targetIps: string | undefined,
+    targetMunicipio: string | undefined
+  ): InformeDatos => {
+    const { R: kpis } = resultsForPdf;
+    const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
+    const analysisDate = new Date();
+
+    const parseAIContent = (content: string): string[] => {
+      return content.replace(/<\/?p>/g, '\n').replace(/<\/?ul>/g, '').split('<li>').map(s => s.replace(/<\/li>/g, '').trim()).filter(Boolean);
+    };
+
+    return {
+      encabezado: {
+        proceso: 'Dirección del Riesgo en Salud',
+        formato: 'Evaluación de indicadores de gestantes, hipertensos y diabéticos (código DR-PP-F-06, versión 01; emisión 18/06/2019; vigencia 02/07/2019)',
+        entidad: `${targetIps || "Consolidado"} - Municipio: ${targetMunicipio || "Todos"}`,
+        vigencia: `01/01/${selectedYear}–31/12/${selectedYear}`,
+        lugarFecha: `Valledupar, ${analysisDate.toLocaleDateString('es-ES')}`
+      },
+      referencia: aiContent.reference.replace(/<p>|<\/p>/g, ''),
+      analisisResumido: parseAIContent(aiContent.summary),
+      datosAExtraer: [
+        { label: "Población HTA (según archivo población)", valor: String(kpis.DENOMINADOR_HTA_MENORES) },
+        { label: "Población DM (según archivo población)", valor: String(kpis.POBLACION_DM_TOTAL) },
+        { label: "Total pacientes en data", valor: String(kpis.TOTAL_FILAS) },
+        { label: `Distribución (HTA=${kpis.NUMERADOR_HTA}, DM=${kpis.NUMERADOR_DM})`, valor: "" },
+        { label: "Inasistencia (por última TA)", valor: `${kpis.NUMERADOR_INASISTENTE} usuarios` },
+        { label: "Tamizaje Creatinina", valor: formatPercent(kpis.DENOMINADOR_CREATININA > 0 ? kpis.NUMERADOR_CREATININA / kpis.DENOMINADOR_CREATININA : 0) },
+        { label: "Tamizaje HbA1c (en DM)", valor: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_HBA1C / kpis.DENOMINADOR_DM_CONTROLADOS : 0) },
+        { label: "Tamizaje Microalbuminuria (en DM)", valor: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_MICROALBUMINURIA / kpis.DENOMINADOR_DM_CONTROLADOS : 0) },
+      ],
+      calidadDato: parseAIContent(aiContent.dataQuality),
+      observaciones: parseAIContent(aiContent.specificObservations),
+      compromisos: parseAIContent(aiContent.actions),
+      creditos: {
+        elaboro: 'Epidemiólogo',
+        reviso: 'Gestión de Calidad / Lider Ruta CCVM',
+        aprobo: 'Consejo Directivo',
+        participantes: ['Sandra Marcela Garcerant González (Líder Ruta CCVM)', 'Lirenys Iveth Ordosgoita Blanco (Lider de Ruta CCVM)', 'Eduardo Garcerant (Auditor de la Dirección del Riesgo)']
+      }
+    };
+  };
+
  const handleGeneratePdf = async () => {
     if (!lastResults) {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
@@ -147,7 +187,6 @@ export default function ClientPage() {
             );
             
             if (specificGroupData) {
-                // To create a "mini" DataProcessingResult for a single group
                 resultsForPdf = {
                     ...lastResults,
                     R: { ...specificGroupData.results, TOTAL_FILAS: specificGroupData.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
@@ -158,8 +197,7 @@ export default function ClientPage() {
             }
         }
 
-        // 1. Generate AI text content
-        const reportText = await generateReportText({
+        const aiContent = await generateReportText({
             results: resultsForPdf,
             targetIps: targetIps,
             targetMunicipio: targetMunicipio,
@@ -170,50 +208,9 @@ export default function ClientPage() {
             }
         });
         
-        // 2. Prepare data for the PDF component
-        setPdfReportData({
-            analysisDate: new Date(),
-            period: { year: Number(selectedYear), month: Number(selectedMonth) },
-            results: resultsForPdf,
-            aiContent: reportText,
-            targetIps: targetIps,
-            targetMunicipio: targetMunicipio
-        });
-
-        // 3. Wait for state to update and then render to PDF
-        setTimeout(async () => {
-            const pdfContentElement = document.getElementById('pdf-content');
-            if (pdfContentElement) {
-                const canvas = await html2canvas(pdfContentElement, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const pageMargin = 4;
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const contentWidth = pdfWidth - (pageMargin * 2);
-                const contentHeight = pdfHeight - (pageMargin * 2);
-
-                const canvasAspectRatio = canvas.width / canvas.height;
-                let finalImgWidth = contentWidth;
-                let finalImgHeight = finalImgWidth / canvasAspectRatio;
-
-                if (finalImgHeight > contentHeight) {
-                    finalImgHeight = contentHeight;
-                    finalImgWidth = finalImgHeight * canvasAspectRatio;
-                }
-                
-                const xPos = pageMargin + (contentWidth - finalImgWidth) / 2;
-                const yPos = pageMargin;
-
-                pdf.addImage(imgData, 'PNG', xPos, yPos, finalImgWidth, finalImgHeight);
-                
-                const pdfBlob = pdf.output('blob');
-                const url = URL.createObjectURL(pdfBlob);
-                setPdfUrl(url);
-                setIsPdfViewerOpen(true);
-            }
-        }, 100); // Small delay to ensure React renders pdfReportData
+        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio);
+        
+        await descargarInformePDF(datosInforme);
 
     } catch (error) {
         console.error("Error generando el PDF:", error);
@@ -235,7 +232,6 @@ export default function ClientPage() {
     const zip = new JSZip();
     const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
 
-    // Mock AI content for fast generation
     const mockAiContent: AIContent = {
         reference: "<p>Análisis de indicadores de gestión del riesgo, sin redacción de IA.</p>",
         summary: "<p>Análisis pendiente. Revisar datos para conclusiones.</p>",
@@ -244,8 +240,15 @@ export default function ClientPage() {
         actions: "<p>Compromisos y acciones por definir.</p>",
     };
     
+    // Dynamically import pdfmake for bulk generation
+    const pdfMake = (await import("pdfmake/build/pdfmake")).default;
+    const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
+    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    
     try {
-        for (const group of lastResults.groupedData) {
+        const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
+
+        for (const group of uniqueGroups) {
             const { ips, municipio } = group.keys;
             toast({ title: `Generando: ${ips} - ${municipio}`, description: 'Por favor, espere...' });
             
@@ -255,42 +258,18 @@ export default function ClientPage() {
                 groupedData: [group],
             };
 
-            const reportData: ReportData = {
-                analysisDate: new Date(),
-                period: { year: Number(selectedYear), month: Number(selectedMonth) },
-                results: resultsForPdf,
-                aiContent: mockAiContent,
-                targetIps: ips,
-                targetMunicipio: municipio,
-            };
+            const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio);
             
-            setPdfReportData(reportData);
+            const docDefinition = buildDocDefinition(reportData);
 
-            await new Promise(resolve => setTimeout(resolve, 100)); // Wait for render
+            const pdfDoc = pdfMake.createPdf(docDefinition);
 
-            const pdfContentElement = document.getElementById('pdf-content');
-            if (pdfContentElement) {
-                const canvas = await html2canvas(pdfContentElement, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const pageMargin = 4;
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const contentWidth = pdfWidth - (pageMargin * 2);
+            const pdfBlob = await new Promise<Blob>((resolve) => {
+                pdfDoc.getBlob((blob) => resolve(blob));
+            });
 
-                const canvasAspectRatio = canvas.width / canvas.height;
-                const finalImgWidth = contentWidth;
-                const finalImgHeight = finalImgWidth / canvasAspectRatio;
-                
-                const xPos = pageMargin;
-                const yPos = pageMargin;
-
-                pdf.addImage(imgData, 'PNG', xPos, yPos, finalImgWidth, finalImgHeight);
-                const pdfBlob = pdf.output('blob');
-                
-                const fileName = `Informe_${ips.replace(/\s/g, '_')}_${municipio.replace(/\s/g, '_')}.pdf`;
-                zip.file(fileName, pdfBlob);
-            }
+            const fileName = `Informe_${ips.replace(/\s/g, '_')}_${municipio.replace(/\s/g, '_')}.pdf`;
+            zip.file(fileName, pdfBlob);
         }
 
         toast({ title: 'Comprimiendo archivos...', description: 'Preparando la descarga del archivo ZIP.' });
@@ -311,7 +290,6 @@ export default function ClientPage() {
         toast({ title: 'Error', description: 'No se pudo generar el archivo ZIP.', variant: 'destructive' });
     } finally {
         setIsGeneratingPdf(false);
-        setPdfReportData(null); 
     }
   };
 
@@ -403,7 +381,7 @@ export default function ClientPage() {
     {
       title: 'Resultado HTA General',
       cards: [
-        { label: 'HTA Controlado (Numerador)', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) encontrados en el archivo.' },
+        { label: 'Pacientes HTA (Numerador)', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) encontrados en el archivo.' },
         { label: 'Población HTA (Denominador)', key: 'DENOMINADOR_HTA_MENORES', description: 'Total de pacientes con diagnóstico de HTA según archivo de población.' },
         { label: 'Resultado HTA', key: 'RESULTADO_HTA', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES > 0 ? kpis.NUMERADOR_HTA / kpis.DENOMINADOR_HTA_MENORES : 0), description: '(Numerador HTA / Población HTA)' },
       ]
@@ -522,23 +500,6 @@ export default function ClientPage() {
         strategy="lazyOnload"
         onLoad={() => setXlsxLoaded(true)}
       />
-
-       {/* Contenido oculto para la generación de PDF */}
-        {pdfReportData && (
-            <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '210mm' }}>
-                <PdfContent id="pdf-content" data={pdfReportData} />
-            </div>
-        )}
-
-        {/* Visualizador de PDF */}
-        {pdfUrl && (
-            <PdfViewer
-                isOpen={isPdfViewerOpen}
-                onClose={() => setIsPdfViewerOpen(false)}
-                pdfUrl={pdfUrl}
-            />
-        )}
-
 
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
@@ -695,7 +656,7 @@ export default function ClientPage() {
                         const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
                         const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
                         const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
-                        const resultadoMayores = g.results.DENOMINador_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
+                        const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
                         const resultadoCrea = g.results.DENOMINADOR_CREATININA > 0 ? g.results.NUMERADOR_CREATININA / g.results.DENOMINADOR_CREATININA : 0;
                         const resultadoInasist = g.rowCount > 0 ? g.results.NUMERADOR_INASISTENTE / g.rowCount : 0;
 
