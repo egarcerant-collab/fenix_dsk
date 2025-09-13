@@ -463,6 +463,8 @@ export default function ClientPage() {
                         const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
                         const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
                         const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
+                        const resultadoCrea = g.results.DENOMINADOR_CREATININA > 0 ? g.results.NUMERADOR_CREATININA / g.results.DENOMINADOR_CREATININA : 0;
+                        const resultadoInasist = g.rowCount > 0 ? g.results.NUMERADOR_INASISTENTE / g.rowCount : 0;
 
                         return (
                           <AccordionItem value={`item-${index}`} key={index} className="border rounded-md px-4">
@@ -472,25 +474,12 @@ export default function ClientPage() {
                                   <div className="font-medium">{g.keys.ips}</div>
                                   <div className="text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
                                 </div>
-                                <div className="flex gap-4">
-                                  <div className="text-center">
-                                    <div className="font-semibold text-muted-foreground">Res. HTA</div>
-                                    <div className={`font-bold ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-                                      {formatPercent(resultadoHTA)}
-                                    </div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-semibold text-muted-foreground">Res. DM Adh.</div>
-                                    <div className={`font-bold ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-                                      {formatPercent(resultadoDMAdh)}
-                                    </div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-semibold text-muted-foreground">Res. DM Cont.</div>
-                                    <div className={`font-bold ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-                                      {formatPercent(resultadoDMCont)}
-                                    </div>
-                                  </div>
+                                <div className="grid grid-cols-5 gap-2 text-center text-sm md:text-base">
+                                  <KpiSummary label="Res. HTA" value={resultadoHTA} />
+                                  <KpiSummary label="Res. DM Adh." value={resultadoDMAdh} />
+                                  <KpiSummary label="Res. DM Cont." value={resultadoDMCont} />
+                                  <KpiSummary label="Res. Crea" value={resultadoCrea} />
+                                  <KpiSummary label="Res. Inasist." value={resultadoInasist} />
                                 </div>
                               </div>
                             </AccordionTrigger>
@@ -534,6 +523,21 @@ export default function ClientPage() {
                                                 <KpiDetail label="Num DM Cont." value={g.results.NUMERADOR_DM_CONTROLADOS} />
                                                 <KpiDetail label="Den DM Cont. (Arch.)" value={g.results.DENOMINADOR_DM_CONTROLADOS} />
                                                 <KpiDetail label="% DM Cont." value={formatPercent(resultadoDMCont)} />
+                                              </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                     <AccordionItem value="otros-kpis">
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">Otros KPIs</AccordionTrigger>
+                                        <AccordionContent className="pt-2 space-y-2">
+                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num Creatinina" value={g.results.NUMERADOR_CREATININA} />
+                                                <KpiDetail label="Den Creatinina" value={g.results.DENOMINADOR_CREATININA} />
+                                                <KpiDetail label="% Creatinina" value={formatPercent(resultadoCrea)} />
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num Inasistentes" value={g.results.NUMERADOR_INASISTENTE} />
+                                                <KpiDetail label="Total Filas" value={g.rowCount} />
+                                                <KpiDetail label="% Inasistentes" value={formatPercent(resultadoInasist)} />
                                               </div>
                                         </AccordionContent>
                                     </AccordionItem>
@@ -687,6 +691,22 @@ export default function ClientPage() {
     </>
   );
 }
+
+const KpiSummary = ({ label, value }: { label: string; value: number }) => {
+  const formatPercent = (val: number) => {
+    if (val === 0) return '0%';
+    if (!val || !Number.isFinite(val)) return 'N/A';
+    return `${(val * 100).toFixed(1)}%`;
+  }
+  return (
+    <div className="text-center">
+      <div className="font-semibold text-muted-foreground">{label}</div>
+      <div className={`font-bold ${value < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+        {formatPercent(value)}
+      </div>
+    </div>
+  );
+};
 
 const KpiDetail = ({ label, value }: { label: string; value: string | number }) => (
     <div className="flex flex-col items-center justify-center p-2 border rounded-md bg-background text-center h-full">
