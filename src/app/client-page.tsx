@@ -130,7 +130,7 @@ export default function ClientPage() {
         const poblacionDM = g.results.POBLACION_DM_TOTAL;
         const denominadorDM = g.results.DENOMINADOR_DM_CONTROLADOS;
         const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
-        const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES : 0;
+        const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
         const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
         const resultadoDM = denominadorDM > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / denominadorDM : 0;
 
@@ -142,7 +142,7 @@ export default function ClientPage() {
             'Poblacion_HTA': poblacionHTA,
             'RESULTADO HTA': resultadoHTA,
             'NUMERADOR_HTA_MENORES': g.results.NUMERADOR_HTA_MENORES,
-            'DENOMINADOR_HTA_MENORES': poblacionHTA, 
+            'DENOMINADOR_HTA_MENORES (ARCHIVO)': g.results.DENOMINADOR_HTA_MENORES_ARCHIVO, 
             '% MENORES': resultadoMenores,
             'NUMERADOR_HTA_MAYORES': g.results.NUMERADOR_HTA_MAYORES,
             'DENOMINADOR_HTA_MAYORES': g.results.DENOMINADOR_HTA_MAYORES,
@@ -430,7 +430,7 @@ export default function ClientPage() {
                   <CardContent>
                      <Accordion type="single" collapsible className="w-full space-y-2">
                       {filteredGroupedData && filteredGroupedData.map((g, index) => {
-                        const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
+                        const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
                         const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
                         const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
                         const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
@@ -475,7 +475,7 @@ export default function ClientPage() {
                                         <AccordionContent className="pt-2">
                                             <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
-                                                <KpiDetail label="Pob HTA" value={g.results.DENOMINADOR_HTA_MENORES_ARCHIVO} />
+                                                <KpiDetail label="Pob HTA" value={g.results.DENOMINADOR_HTA_MENORES} />
                                                 <KpiDetail label="Res HTA" value={formatPercent(resultadoHTA)} />
                                             </div>
                                         </AccordionContent>
@@ -667,3 +667,5 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
+
+    
