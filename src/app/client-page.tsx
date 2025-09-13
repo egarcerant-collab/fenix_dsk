@@ -14,7 +14,7 @@ import { FileUp, FileDown, Library, Loader2 } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult } from '@/lib/data-processing';
 import { processUploadedFile } from '@/ai/actions';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
 
@@ -233,17 +233,27 @@ export default function ClientPage() {
 
   const issues = lastResults?.issues || { dates: [], nums: [], cats: [] };
 
-  const chartData = kpis ? [
+  const chartDataHTA = kpis ? [
     { name: 'HTA General', Numerador: kpis.NUMERADOR_HTA, Denominador: kpis.DENOMINADOR_HTA_MENORES },
     { name: 'HTA < 60a', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
     { name: 'HTA >= 60a', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
-    { name: 'Adherencia DM', Numerador: kpis.NUMERADOR_DM, Denominador: kpis.POBLACION_DM_TOTAL },
-    { name: 'Control DM (HbA1c)', Numerador: kpis.NUMERADOR_DM_CONTROLADOS, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
   ] : [];
 
+  const chartDataDM = kpis ? [
+      { name: 'Adherencia DM', Numerador: kpis.NUMERADOR_DM, Denominador: kpis.POBLACION_DM_TOTAL },
+      { name: 'Control DM (HbA1c)', Numerador: kpis.NUMERADOR_DM_CONTROLADOS, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
+  ] : [];
+
+  const chartDataOtros = kpis ? [
+      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
+      { name: 'HbA1c Tomada', Numerador: kpis.NUMERADOR_HBA1C, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
+      { name: 'Microalbuminuria Tomada', Numerador: kpis.NUMERADOR_MICROALBUMINURIA, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
+  ] : [];
+
+
   const chartConfig = {
-    Numerador: { label: 'Numerador (Controlados/Cumplen)', color: 'hsl(var(--primary))' },
-    Denominador: { label: 'Denominador (Población Total)', color: 'hsl(var(--muted))' },
+    Numerador: { label: 'Numerador (Cumplen)', color: 'hsl(var(--primary))' },
+    Denominador: { label: 'Denominador (Población)', color: 'hsl(var(--muted))' },
   };
 
   const departamentos = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.dpto))] : [];
@@ -352,7 +362,7 @@ export default function ClientPage() {
                             <h3 className="text-lg font-semibold text-card-foreground">{group.title}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {group.cards.map(({ label, key, description, isPercentage, value }) => (
-                                    <Card key={key} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
+                                    <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
                                            <p className="text-4xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
                                            <p className="text-sm font-semibold mt-1">{label}</p>
@@ -403,14 +413,14 @@ export default function ClientPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="w-full overflow-auto max-h-[600px] border rounded-md">
-                      <Table className="min-w-full divide-y divide-border">
+                    <div className="w-full overflow-x-auto max-h-[600px] border rounded-md">
+                      <Table className="min-w-max divide-y divide-border">
                         <TableHeader className="sticky top-0 bg-card z-10">
                           <TableRow>
-                            <TableHead>#</TableHead>
-                            <TableHead>DEPARTAMENTO</TableHead>
-                            <TableHead>MUNICIPIO</TableHead>
-                            <TableHead>IPS</TableHead>
+                            <TableHead className="w-[50px]">#</TableHead>
+                            <TableHead className="min-w-[150px]">DEPARTAMENTO</TableHead>
+                            <TableHead className="min-w-[150px]">MUNICIPIO</TableHead>
+                            <TableHead className="min-w-[200px]">IPS</TableHead>
                             <TableHead>Num HTA</TableHead>
                             <TableHead>Pob HTA</TableHead>
                             <TableHead>Res HTA</TableHead>
@@ -437,7 +447,8 @@ export default function ClientPage() {
                             const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
                             const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
                             const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
-                            const resultadoDM = denominadorDM > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / denominadorDM : 0;
+                            const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
+                            const resultadoDMCont = denominadorDM > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / denominadorDM : 0;
                             
                             return (
                                 <TableRow key={index}>
@@ -456,10 +467,10 @@ export default function ClientPage() {
                                     <TableCell className={`font-semibold ${resultadoMayores < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoMayores)}</TableCell>
                                     <TableCell>{g.results.NUMERADOR_DM}</TableCell>
                                     <TableCell>{poblacionDM}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoDM < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoDM)}</TableCell>
+                                    <TableCell className={`font-semibold ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoDMAdh)}</TableCell>
                                     <TableCell>{g.results.NUMERADOR_DM_CONTROLADOS}</TableCell>
                                     <TableCell>{denominadorDM}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoDM < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoDM)}</TableCell>
+                                    <TableCell className={`font-semibold ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoDMCont)}</TableCell>
                                 </TableRow>
                             );
                           })}
@@ -474,33 +485,49 @@ export default function ClientPage() {
                     <CardTitle>Análisis Visual de KPIs</CardTitle>
                     <CardDescription>Comparación visual de pacientes que cumplen (numerador) vs. la población relevante (denominador) para cada indicador.</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
-                      <BarChart
-                        accessibilityLayer
-                        data={chartData}
-                        layout="vertical"
-                        margin={{ left: 20, right: 20 }}
-                      >
-                        <CartesianGrid horizontal={false} />
-                        <YAxis
-                          dataKey="name"
-                          type="category"
-                          tickLine={false}
-                          tickMargin={10}
-                          axisLine={false}
-                          width={120}
-                        />
-                        <XAxis type="number" />
-                        <Tooltip
-                          cursor={{ fill: 'hsl(var(--accent) / 0.2)' }}
-                          content={<ChartTooltipContent indicator="dot" />}
-                        />
-                        <Legend />
-                        <Bar dataKey="Denominador" fill="var(--color-Denominador)" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="Numerador" fill="var(--color-Numerador)" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ChartContainer>
+                  <CardContent className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-center font-medium">Indicadores HTA</h3>
+                        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                          <BarChart accessibilityLayer data={chartDataHTA} layout="vertical" margin={{ left: 30, right: 20 }}>
+                            <CartesianGrid horizontal={false} />
+                            <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} width={100}/>
+                            <XAxis type="number" />
+                            <Tooltip cursor={{ fill: 'hsl(var(--accent) / 0.2)' }} content={<ChartTooltipContent indicator="dot" />} />
+                            <Legend />
+                            <Bar dataKey="Denominador" fill="var(--color-Denominador)" radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="Numerador" fill="var(--color-Numerador)" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ChartContainer>
+                      </div>
+                       <div className="flex flex-col gap-2">
+                        <h3 className="text-center font-medium">Indicadores DM</h3>
+                        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                          <BarChart accessibilityLayer data={chartDataDM} layout="vertical" margin={{ left: 30, right: 20 }}>
+                            <CartesianGrid horizontal={false} />
+                             <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} width={100}/>
+                            <XAxis type="number" />
+                            <Tooltip cursor={{ fill: 'hsl(var(--accent) / 0.2)' }} content={<ChartTooltipContent indicator="dot" />} />
+                            <Legend />
+                            <Bar dataKey="Denominador" fill="var(--color-Denominador)" radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="Numerador" fill="var(--color-Numerador)" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ChartContainer>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-center font-medium">Otros Indicadores (DM)</h3>
+                         <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                           <BarChart accessibilityLayer data={chartDataOtros} layout="vertical" margin={{ left: 30, right: 20 }}>
+                            <CartesianGrid horizontal={false} />
+                             <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} width={100}/>
+                            <XAxis type="number" />
+                            <Tooltip cursor={{ fill: 'hsl(var(--accent) / 0.2)' }} content={<ChartTooltipContent indicator="dot" />} />
+                            <Legend />
+                            <Bar dataKey="Denominador" fill="var(--color-Denominador)" radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="Numerador" fill="var(--color-Numerador)" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ChartContainer>
+                      </div>
                   </CardContent>
                 </Card>
 
