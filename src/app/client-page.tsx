@@ -648,7 +648,7 @@ export default function ClientPage() {
                                     <TableBody>
                                       {issues.cats.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row[1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
                                       {issues.cats.length > 100 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Mostrando 100 de {issues.cats.length}.</TableCell></TableRow>}
-                                    </Body>
+                                    </TableBody>
                                  </Table>
                                </div>
                              </AccordionContent>
@@ -670,5 +670,3 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
-
-    
