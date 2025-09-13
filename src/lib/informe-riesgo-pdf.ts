@@ -1,4 +1,5 @@
 
+
 // src/lib/informe-riesgo-pdf.ts
 // Genera un PDF con el esquema solicitado usando pdfmake.
 // A4, cuerpo 12 pt, títulos en negrilla. Si registras Arial, la usará;
@@ -127,7 +128,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
 
   const docDefinition: any = {
     pageSize: "A4",
-    pageMargins: [60, 20, 60, 60], // izq, sup, der, inf
+    pageMargins: [115, 115, 115, 115], // 4cm en cada lado (1cm = 28.35pt)
     info: {
       title: "Evaluación de Indicadores – Gestión del Riesgo",
       author: "Dirección del Riesgo en Salud",
@@ -142,35 +143,25 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
       small: { fontSize: 10 },
       tableHeader: { bold: true, fontSize: 12 },
     },
-    content: [
-      {
-          columns: [
-              {
-                  width: '*',
-                  stack: mainContent,
-              },
-              {
-                  width: 'auto',
-                  stack: [
-                      images?.header ? { image: images.header, width: 120, alignment: 'right', margin: [0, 0, 0, 20] } : {},
-                      images?.background ? { image: images.background, width: 20, fit: [20, 700] } : {}
-                  ],
-                  alignment: 'right'
-              }
-          ]
-      }
-    ]
+    header: images?.header ? { image: images.header, width: 120, alignment: 'right', margin: [0, 40, 60, 0] } : {},
+    footer: images?.footer ? {
+        image: images.footer,
+        width: 595, // A4 width
+        alignment: 'center',
+        margin: [0, 20, 0, 0]
+    } : {},
+    background: function(currentPage: number, pageSize: any) {
+        if (!images?.background) return null;
+        return {
+            image: images.background,
+            width: pageSize.width,
+            height: pageSize.height,
+            absolutePosition: { x: 0, y: 0 },
+            opacity: 0.8
+        };
+    },
+    content: mainContent
   };
-
-  
-  if(images?.footer) {
-      docDefinition.footer = {
-          image: images.footer,
-          width: 595, // A4 width
-          height: 50,
-          margin: [0, 10, 0, 0]
-      };
-  }
   
   return docDefinition;
 }
@@ -194,5 +185,3 @@ export async function descargarInformePDF(
   const docDef = buildDocDefinition(datos, images);
   pdfMake.createPdf(docDef).download(nombre);
 }
-
-    

@@ -1,4 +1,5 @@
 
+
 "use client";
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
@@ -421,7 +422,7 @@ export default function ClientPage() {
       title: 'Resultado Control DM (HbA1c)',
       cards: [
         { label: 'DM Controlado (Numerador)', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c < 7%.' },
-        { label: 'Pacientes con DM (Denominador)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
+        { label: 'Pacientes con DM (Denominador)', key: 'DENOMINador_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
         { label: 'Resultado Control DM', key: 'RESULTADO_DM_CONTROL', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_DM_CONTROLADOS / kpis.DENOMINADOR_DM_CONTROLADOS : 0), description: '(Numerador / Denominador)' },
       ]
     },
@@ -602,7 +603,7 @@ export default function ClientPage() {
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
                                            <p className="text-2xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
-                                           <p className="font-semibold mt-1">{label.replace(/<|>/g, (char) => (char === '<' ? '<' : '>'))}</p>
+                                           <p className="font-semibold mt-1" dangerouslySetInnerHTML={{ __html: label.replace(/<|>/g, (char) => (char === '<' ? '&lt;' : '&gt;')) }}></p>
                                         </div>
                                         <p className="text-muted-foreground mt-2">{description}</p>
                                     </Card>
