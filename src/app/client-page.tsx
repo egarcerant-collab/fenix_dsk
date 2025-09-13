@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { FileUp, FileDown, Library, Loader2, FlaskConical } from 'lucide-react';
+import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult } from '@/lib/data-processing';
 import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
@@ -609,10 +609,16 @@ export default function ClientPage() {
                                 <CardTitle>Observaciones de Calidad de Datos</CardTitle>
                                 <CardDescription>Detalles sobre datos que pueden requerir revisión.</CardDescription>
                             </div>
-                            <Button onClick={exportResults} variant="outline">
-                                <FileDown className="mr-2 h-4 w-4"/>
-                                Exportar Todo
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button onClick={exportResults} variant="outline">
+                                    <FileDown className="mr-2 h-4 w-4"/>
+                                    Exportar Todo
+                                </Button>
+                                <Button variant="outline">
+                                    <FileText className="mr-2 h-4 w-4"/>
+                                    GENERAR PDF
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -719,3 +725,4 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     
 
     
+
