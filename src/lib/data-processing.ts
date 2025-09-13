@@ -247,7 +247,6 @@ const computeMetrics = (
     let totalPoblacionHta = 0;
     let totalPoblacionDm = 0;
 
-    // Iterate over population map to get totals
     for (const pop of populationMap.values()) {
         totalPoblacionHta += pop.hta;
         totalPoblacionDm += pop.dm;
@@ -256,14 +255,12 @@ const computeMetrics = (
     R_accumulator.DENOMINADOR_HTA_MENORES = totalPoblacionHta;
     R_accumulator.POBLACION_DM_TOTAL = totalPoblacionDm;
     
-    // Aggregate results for the entire file
     for (const group of groupedResults.values()) {
         const popData = populationMap.get(`${group.keys.dpto}|${group.keys.municipio}|${group.keys.ips}`) || { hta: 0, dm: 0 };
         
         group.results.DENOMINADOR_HTA_MENORES = popData.hta;
         group.results.POBLACION_DM_TOTAL = popData.dm;
         
-        // Accumulate totals for Numerators and other fields
         R_accumulator.NUMERADOR_HTA += group.results.NUMERADOR_HTA;
         R_accumulator.NUMERADOR_HTA_MAYORES += group.results.NUMERADOR_HTA_MAYORES;
         R_accumulator.DENOMINADOR_HTA_MAYORES += group.results.DENOMINADOR_HTA_MAYORES;
@@ -326,5 +323,3 @@ export async function processDataFile(
     onProgress(100, 'Cálculo completado.');
     return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
 }
-
-    
