@@ -403,7 +403,7 @@ export default function ClientPage() {
     {
       title: 'Resultado HTA General',
       cards: [
-        { label: 'HTA Controlado (Numerador)', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) con PA < 140/90.' },
+        { label: 'HTA Controlado (Numerador)', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) encontrados en el archivo.' },
         { label: 'Población HTA (Denominador)', key: 'DENOMINADOR_HTA_MENORES', description: 'Total de pacientes con diagnóstico de HTA según archivo de población.' },
         { label: 'Resultado HTA', key: 'RESULTADO_HTA', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES > 0 ? kpis.NUMERADOR_HTA / kpis.DENOMINADOR_HTA_MENORES : 0), description: '(Numerador HTA / Población HTA)' },
       ]
@@ -695,7 +695,7 @@ export default function ClientPage() {
                         const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
                         const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
                         const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
-                        const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
+                        const resultadoMayores = g.results.DENOMINador_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
                         const resultadoCrea = g.results.DENOMINADOR_CREATININA > 0 ? g.results.NUMERADOR_CREATININA / g.results.DENOMINADOR_CREATININA : 0;
                         const resultadoInasist = g.rowCount > 0 ? g.results.NUMERADOR_INASISTENTE / g.rowCount : 0;
 
@@ -739,8 +739,7 @@ export default function ClientPage() {
                                               </div>
                                               <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num HTA >=60" value={g.results.NUMERADOR_HTA_MAYORES} />
-                                                <KpiDetail label="Den HTA >=60 (Arch.
-)" value={g.results.DENOMINADOR_HTA_MAYORES} />
+                                                <KpiDetail label="Den HTA >=60 (Arch.)" value={g.results.DENOMINADOR_HTA_MAYORES} />
                                                 <KpiDetail label="% >=60" value={formatPercent(resultadoMayores)} />
                                               </div>
                                         </AccordionContent>

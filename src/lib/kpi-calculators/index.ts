@@ -35,12 +35,9 @@ export interface KpiResults {
 // --- Individual KPI Calculator Functions ---
 
 function calculateHtaControlado(input: KpiInput): number {
-    const { edad, htaN, pas, pad, fechaOkPA } = input;
+    const { edad, htaN } = input;
     if (htaN === 'SI' && edad != null && edad >= 18 && edad <= 69) {
-        const presOk = (pas != null && pas < 140) && (pad != null && pad < 90);
-        if (presOk && fechaOkPA) {
-            return 1;
-        }
+        return 1;
     }
     return 0;
 }
