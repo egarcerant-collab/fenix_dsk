@@ -824,3 +824,6 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
+
+
+    
