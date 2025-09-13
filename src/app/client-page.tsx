@@ -240,6 +240,13 @@ export default function ClientPage() {
     { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
     { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
     { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
+    { 
+      label: 'Resultado Creatinina (%)', 
+      key: 'RESULTADO_CREATININA',
+      isPercentage: true, 
+      value: formatPercent(kpis.DENOMINADOR_CREATININA > 0 ? kpis.NUMERADOR_CREATININA / kpis.DENOMINADOR_CREATININA : 0),
+      description: '(Numerador / Denominador)' 
+    },
     { label: 'HbA1c Tomada (DM)', key: 'NUMERADOR_HBA1C', description: 'Pacientes DM con HbA1c en últimos 6 meses.' },
     { label: 'Microalbuminuria Tomada (DM)', key: 'NUMERADOR_MICROALBUMINURIA', description: 'Pacientes DM con microalbuminuria en últimos 12 meses.' },
     { label: 'Inasistentes a Control', key: 'NUMERADOR_INASISTENTE', description: 'Pacientes con fecha de PA registrada pero fuera de los últimos 6 meses.' },
@@ -394,10 +401,10 @@ export default function ClientPage() {
                          <div className="border-t pt-8 space-y-4">
                             <h3 className="font-semibold text-card-foreground">Otros Indicadores y Métricas</h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                               {otherKpis.map(({ label, key, description }) => (
+                               {otherKpis.map(({ label, key, description, isPercentage, value }) => (
                                     <Card key={key} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
-                                            <p className="text-2xl font-bold text-primary">{(kpis as any)[key] ?? 0}</p>
+                                            <p className="text-2xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
                                             <p className="font-semibold mt-1">{label}</p>
                                         </div>
                                         <p className="text-muted-foreground mt-2">{description}</p>
@@ -670,3 +677,5 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
+
+    
