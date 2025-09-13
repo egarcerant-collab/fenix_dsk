@@ -7,6 +7,7 @@ interface PdfContentProps {
 
 // Helper to format numbers, avoiding large decimals
 const formatNumber = (num: number) => {
+    if (num === null || num === undefined) return 0;
     if (Number.isInteger(num)) return num;
     return num.toFixed(2);
 }
@@ -40,7 +41,7 @@ export default function PdfContent({ id, data }: PdfContentProps) {
     const { 
         NUMERADOR_CREATININA, DENOMINADOR_CREATININA, NUMERADOR_HBA1C,
         NUMERADOR_MICROALBUMINURIA, NUMERADOR_INASISTENTE, DENOMINADOR_DM_CONTROLADOS,
-        NUMERADOR_DM, POBLACION_DM_TOTAL, NUMERADOR_HTA, DENOMINADOR_HTA_MENORES
+        NUMERADOR_DM, POBLACION_DM_TOTAL, DENOMINADOR_HTA_MENORES
     } = kpisToUse;
 
     const municipio = targetData ? targetData.keys.municipio : 'Consolidado';
@@ -63,7 +64,7 @@ export default function PdfContent({ id, data }: PdfContentProps) {
         {/* Cuerpo del Informe */}
         <main className="mt-4">
             <Section title="Referencia">
-                 <p>{aiContent.reference.replace('{{corte}}', `${monthName} de ${period.year}`)}</p>
+                 <p dangerouslySetInnerHTML={{ __html: aiContent.reference }} />
             </Section>
 
             <Section title="Análisis resumido">

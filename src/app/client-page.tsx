@@ -130,10 +130,17 @@ export default function ClientPage() {
     toast({ title: 'Generando PDF con IA...', description: 'Redactando análisis, esto puede tardar un momento.' });
 
     try {
+        const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
+
         // 1. Generate AI text content
         const reportText = await generateReportText({
             results: lastResults,
-            targetIps: selectedIpsForPdf === 'all' ? undefined : selectedIpsForPdf
+            targetIps: selectedIpsForPdf === 'all' ? undefined : selectedIpsForPdf,
+            corte: {
+                year: Number(selectedYear),
+                month: Number(selectedMonth),
+                monthName: monthName
+            }
         });
         
         // 2. Prepare data for the PDF component
@@ -153,19 +160,25 @@ export default function ClientPage() {
                 const imgData = canvas.toDataURL('image/png');
                 
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageMargin = 4;
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = pdf.internal.pageSize.getHeight();
+                const contentWidth = pdfWidth - (pageMargin * 2);
+                const contentHeight = pdfHeight - (pageMargin * 2);
+
                 const canvasAspectRatio = canvas.width / canvas.height;
-                let finalImgWidth = pdfWidth;
+                let finalImgWidth = contentWidth;
                 let finalImgHeight = finalImgWidth / canvasAspectRatio;
 
-                if (finalImgHeight > pdfHeight) {
-                    finalImgHeight = pdfHeight;
+                if (finalImgHeight > contentHeight) {
+                    finalImgHeight = contentHeight;
                     finalImgWidth = finalImgHeight * canvasAspectRatio;
                 }
-                const xPos = (pdfWidth - finalImgWidth) / 2;
+                
+                const xPos = pageMargin + (contentWidth - finalImgWidth) / 2;
+                const yPos = pageMargin;
 
-                pdf.addImage(imgData, 'PNG', xPos, 0, finalImgWidth, finalImgHeight);
+                pdf.addImage(imgData, 'PNG', xPos, yPos, finalImgWidth, finalImgHeight);
                 
                 const pdfBlob = pdf.output('blob');
                 const url = URL.createObjectURL(pdfBlob);

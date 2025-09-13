@@ -25,6 +25,7 @@ const reportGenerationPrompt = ai.definePrompt({
 
         DATA PROVIDED:
         - Analysis for: {{#if targetIps}}"{{targetIps}}"{{else}}"Consolidated all IPS"{{/if}}
+        - Analysis Period: Month {{corte.month}}, Year {{corte.year}}
         - Total rows in the processed file: {{results.R.TOTAL_FILAS}}
         - Total HTA Population (from population file): {{results.R.DENOMINADOR_HTA_MENORES}}
         - Total DM Population (from population file): {{results.R.POBLACION_DM_TOTAL}}
@@ -42,7 +43,7 @@ const reportGenerationPrompt = ai.definePrompt({
 
         GENERATE THE FOLLOWING SECTIONS (use HTML paragraphs <p> for sections that require it):
 
-        1.  **reference**: A single paragraph. Start with "Posterior al análisis de la información reportada en la Data de Enfermedades Precursoras (HTA y DM) con corte {{corte}}, se realiza la evaluación de indicadores de gestión del riesgo por componente."
+        1.  **reference**: A single paragraph. Start with "Posterior al análisis de la información reportada en la Data de Enfermedades Precursoras (HTA y DM) con corte a {{corte.monthName}} de {{corte.year}}, se realiza la evaluación de indicadores de gestión del riesgo por componente."
             Briefly state whether the analysis is for a specific entity or consolidated.
 
         2.  **summary**: HTML format. A summary of key findings. Compare reported patients vs. expected population. Mention total patients in the file, distribution (HTA, DM), adherence issues (absences), and if key lab tests (TFG, creatinina, HbA1c) are missing or not filled.

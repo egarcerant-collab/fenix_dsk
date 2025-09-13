@@ -40,6 +40,11 @@ export type ReportData = z.infer<typeof ReportDataSchema>;
 export const ReportRequestSchema = z.object({
     results: ProcessFileResponseSchema,
     targetIps: z.string().optional().describe("La IPS específica a analizar. Si no se provee, el análisis es consolidado."),
+    corte: z.object({
+        year: z.number(),
+        month: z.number(),
+        monthName: z.string(),
+    }).describe("El período de corte para el análisis del informe.")
 });
 
 export type ReportRequest = z.infer<typeof ReportRequestSchema>;
