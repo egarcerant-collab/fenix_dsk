@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { FileUp, FileDown, Library, Loader2, ChevronDown } from 'lucide-react';
+import { FileUp, FileDown, Library, Loader2, FlaskConical } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult } from '@/lib/data-processing';
-import { processUploadedFile } from '@/ai/actions';
+import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +62,27 @@ export default function ClientPage() {
     return () => clearInterval(interval);
   }, []);
 
+
+ const startProcessing = (action: Promise<DataProcessingResult>) => {
+    setIsProcessing(true);
+    setProgress(20);
+    setStatus('Procesando archivo en el servidor...');
+
+    action.then(results => {
+      setLastResults(results);
+      setStatus('Completado.');
+      setProgress(100);
+      toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
+    }).catch(err => {
+      console.error(err);
+      toast({ title: 'Error procesando archivo', description: err?.message || String(err), variant: 'destructive' });
+      setStatus('Error.');
+      setProgress(0);
+    }).finally(() => {
+      setIsProcessing(false);
+    });
+ }
+
  const handleProcess = async () => {
     if (!selectedFile) {
         toast({ title: 'Error', description: 'Por favor, seleccione un archivo .xlsx o .xls', variant: 'destructive' });
@@ -72,32 +93,22 @@ export default function ClientPage() {
         return;
     }
 
-    setIsProcessing(true);
-    setProgress(20);
-    setStatus('Subiendo y procesando archivo en el servidor...');
-
-    try {
-      const fileDataUri = await fileToDataUri(selectedFile);
-      
-      const results = await processUploadedFile({
-        fileDataUri,
-        year: Number(selectedYear),
-        month: Number(selectedMonth)
-      });
-      
-      setLastResults(results);
-      setStatus('Completado.');
-      setProgress(100);
-      toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: 'Error procesando archivo', description: err?.message || String(err), variant: 'destructive' });
-      setStatus('Error.');
-      setProgress(0);
-    } finally {
-      setIsProcessing(false);
-    }
+    const fileDataUri = await fileToDataUri(selectedFile);
+    startProcessing(processUploadedFile({
+      fileDataUri,
+      year: Number(selectedYear),
+      month: Number(selectedMonth)
+    }));
   };
+
+ const handleProcessLocal = async () => {
+    if (!selectedYear || !selectedMonth) {
+        toast({ title: 'Error', description: 'Por favor, seleccione mes y año.', variant: 'destructive' });
+        return;
+    }
+     startProcessing(processLocalTestFile(Number(selectedYear), Number(selectedMonth)));
+ }
+
 
   const exportResults = () => {
     if (!lastResults) { 
@@ -269,7 +280,7 @@ export default function ClientPage() {
         onLoad={() => setXlsxLoaded(true)}
       />
 
-      <div className="min-h-screen bg-background text-foreground font-sans text-base">
+      <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
           <div className="container mx-auto flex items-center justify-between">
             <h1 className="font-bold text-primary">Excel Data Insights</h1>
@@ -330,6 +341,10 @@ export default function ClientPage() {
                 </div>
 
                 <div className="flex gap-2 justify-self-end self-end w-full md:w-auto">
+                   <Button onClick={handleProcessLocal} variant="outline" className="w-full" disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+                    Procesar Prueba
+                  </Button>
                   <Button onClick={handleProcess} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isProcessing || !selectedFile}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
                     {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
@@ -415,7 +430,7 @@ export default function ClientPage() {
                   <CardContent>
                      <Accordion type="single" collapsible className="w-full space-y-2">
                       {filteredGroupedData && filteredGroupedData.map((g, index) => {
-                        const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
+                        const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
                         const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
                         const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
                         const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
@@ -460,7 +475,7 @@ export default function ClientPage() {
                                         <AccordionContent className="pt-2">
                                             <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
-                                                <KpiDetail label="Pob HTA" value={poblacionHTA} />
+                                                <KpiDetail label="Pob HTA" value={g.results.DENOMINADOR_HTA_MENORES_ARCHIVO} />
                                                 <KpiDetail label="Res HTA" value={formatPercent(resultadoHTA)} />
                                             </div>
                                         </AccordionContent>

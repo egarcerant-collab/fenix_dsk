@@ -1,4 +1,5 @@
 
+
 import { computeAllKpisForRow, KpiInput, KpiResults } from '@/lib/kpi-calculators';
 import { getPopulationMap, PopulationData } from '@/lib/population';
 import * as xlsx from 'xlsx';
@@ -243,20 +244,48 @@ const computeMetrics = (
         if (i0 % batch === 0 || i0 === rawRows.length - 1) onProgress(((i0 + 1) / total) * 90 + 10, `Procesando fila ${i0 + 1} de ${total}…`);
     }
     
+    let totalPoblacionHta = 0;
+    let totalPoblacionDm = 0;
+
+    for (const pop of populationMap.values()) {
+        totalPoblacionHta += pop.hta;
+        totalPoblacionDm += pop.dm;
+    }
+
+    if (totalPoblacionHta === 0) {
+        for (const group of groupedResults.values()) {
+            totalPoblacionHta += group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
+        }
+    }
+     if (totalPoblacionDm === 0) {
+        for (const group of groupedResults.values()) {
+            totalPoblacionDm += group.results.NUMERADOR_DM;
+        }
+    }
+
+    R_accumulator.DENOMINADOR_HTA_MENORES = totalPoblacionHta;
+    R_accumulator.POBLACION_DM_TOTAL = totalPoblacionDm;
     
     // Aggregate results for the entire file
     for (const group of groupedResults.values()) {
         const popData = populationMap.get(`${group.keys.dpto}|${group.keys.municipio}|${group.keys.ips}`) || { hta: 0, dm: 0 };
         
-        // Use population file data if available, otherwise use counts from the uploaded file for that group
         group.results.DENOMINADOR_HTA_MENORES = popData.hta > 0 ? popData.hta : group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
         group.results.POBLACION_DM_TOTAL = popData.dm > 0 ? popData.dm : group.results.NUMERADOR_DM;
         
-        // Accumulate totals
-        Object.keys(R_accumulator).forEach(keyStr => {
-            const key = keyStr as keyof KpiResults;
-            R_accumulator[key] += group.results[key];
-        });
+        // Accumulate totals for Numerators and other fields
+        R_accumulator.NUMERADOR_HTA += group.results.NUMERADOR_HTA;
+        R_accumulator.NUMERADOR_HTA_MAYORES += group.results.NUMERADOR_HTA_MAYORES;
+        R_accumulator.DENOMINADOR_HTA_MAYORES += group.results.DENOMINADOR_HTA_MAYORES;
+        R_accumulator.NUMERADOR_DM_CONTROLADOS += group.results.NUMERADOR_DM_CONTROLADOS;
+        R_accumulator.DENOMINADOR_DM_CONTROLADOS += group.results.DENOMINADOR_DM_CONTROLADOS;
+        R_accumulator.NUMERADOR_DM += group.results.NUMERADOR_DM;
+        R_accumulator.NUMERADOR_HTA_MENORES += group.results.NUMERADOR_HTA_MENORES;
+        R_accumulator.DENOMINADOR_HTA_MENORES_ARCHIVO += group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
+        R_accumulator.NUMERADOR_CREATININA += group.results.NUMERADOR_CREATININA;
+        R_accumulator.NUMERADOR_HBA1C += group.results.NUMERADOR_HBA1C;
+        R_accumulator.NUMERADOR_MICROALBUMINURIA += group.results.NUMERADOR_MICROALBUMINURIA;
+        R_accumulator.NUMERADOR_INASISTENTE += group.results.NUMERADOR_INASISTENTE;
     }
 
     const groupedData = Array.from(groupedResults.values()).sort((a, b) => {
@@ -307,4 +336,3 @@ export async function processDataFile(
     onProgress(100, 'Cálculo completado.');
     return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
 }
-
