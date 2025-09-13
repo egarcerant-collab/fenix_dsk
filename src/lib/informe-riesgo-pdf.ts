@@ -166,7 +166,7 @@ export async function descargarInformePDF(datos: InformeDatos, nombre = "Informe
   const vfsFonts = (await import("pdfmake/build/vfs_fonts")).default;
 
   // vfs por defecto (Roboto); si registras Arial, se añadirá encima
-  (pdfMake as any).vfs = vfsFonts.pdfMake.vfs;
+  (pdfMake as any).vfs = vfsFonts;
 
   // Registrar Arial si proporcionaste las TTF en base64
   await registerArialIfAvailable(pdfMake);
@@ -174,3 +174,5 @@ export async function descargarInformePDF(datos: InformeDatos, nombre = "Informe
   const docDef = buildDocDefinition(datos);
   pdfMake.createPdf(docDef).download(nombre);
 }
+
+    

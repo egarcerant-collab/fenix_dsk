@@ -50,7 +50,7 @@ export default function ClientPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
-  const [selectedDpto, setSelectedDpto] = useState<string>('all');
+  const [selectedDpto, setSelectedDpto] = useState('all');
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
 
   useEffect(() => {
@@ -243,7 +243,7 @@ export default function ClientPage() {
     // Dynamically import pdfmake for bulk generation
     const pdfMake = (await import("pdfmake/build/pdfmake")).default;
     const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
-    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    pdfMake.vfs = pdfFonts;
     
     try {
         const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
@@ -867,6 +867,8 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
 
 
 
+
+    
 
     
 
