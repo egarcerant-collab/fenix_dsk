@@ -386,8 +386,8 @@ export default function ClientPage() {
 
   const chartDataHTA = kpis ? [
     { name: 'HTA General', Numerador: kpis.NUMERADOR_HTA, Denominador: kpis.DENOMINADOR_HTA_MENORES },
-    { name: 'HTA < 60a', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
-    { name: 'HTA >= 60a', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
+    { name: 'HTA <60', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
+    { name: 'HTA >=60', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
   ] : [];
 
   const chartDataDM = kpis ? [
@@ -541,7 +541,7 @@ export default function ClientPage() {
                     <CardContent className="flex flex-col gap-8">
                         {kpiGroups.map((group, index) => (
                           <div key={index} className="space-y-4">
-                            <h3 className="font-semibold text-card-foreground" dangerouslySetInnerHTML={{ __html: group.title }}></h3>
+                            <h3 className="font-semibold text-card-foreground">{group.title}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {group.cards.map(({ label, key, description, isPercentage, value }) => (
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
@@ -744,11 +744,11 @@ export default function ClientPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader className="flex-row items-center justify-between">
-                        <div>
-                            <CardTitle>Observaciones y Exportación</CardTitle>
-                            <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
-                        </div>
+                    <CardHeader>
+                        <CardTitle>Observaciones y Exportación</CardTitle>
+                        <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
                         <div className="flex items-center gap-2">
                             <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
                                 <FileDown className="mr-2 h-4 w-4"/>
@@ -770,74 +770,6 @@ export default function ClientPage() {
                                 {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
                             </Button>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                         <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="item-1">
-                             <AccordionTrigger className="font-semibold flex justify-between w-full">
-                                <span>Columnas esperadas no encontradas</span> 
-                                <Badge variant={kpis.FALTANTES_ENCABEZADOS?.length > 0 ? "destructive" : "secondary"}>{kpis.FALTANTES_ENCABEZADOS?.length || 0}</Badge>
-                             </AccordionTrigger>
-                             <AccordionContent>
-                               <div className="max-h-[300px] overflow-auto border rounded-md p-4 bg-muted/50">
-                                  <ul className="list-disc pl-5 font-mono">
-                                   {(kpis.FALTANTES_ENCABEZADOS || []).map((h: string, i: number) => <li key={i}>{h}</li>)}
-                                  </ul>
-                               </div>
-                             </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="item-2">
-                             <AccordionTrigger className="font-semibold flex justify-between w-full">
-                               <span>Fechas con formato dudoso</span>
-                               <Badge variant={issues.dates.length > 0 ? "destructive" : "secondary"}>{issues.dates.length}</Badge>
-                              </AccordionTrigger>
-                             <AccordionContent>
-                                <div className="max-h-[300px] overflow-auto border rounded-md">
-                                  <Table>
-                                    <TableHeader><TableRow><TableHead>Fila</TableHead><TableHead>Campo</TableHead><TableHead>Valor</TableHead><TableHead>Observación</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                      {issues.dates.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row[1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
-                                      {issues.dates.length > 100 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Mostrando 100 de {issues.dates.length}.</TableCell></TableRow>}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                             </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="item-3">
-                             <AccordionTrigger className="font-semibold flex justify-between w-full">
-                                <span>Campos numéricos inválidos</span>
-                                <Badge variant={issues.nums.length > 0 ? "destructive" : "secondary"}>{issues.nums.length}</Badge>
-                             </AccordionTrigger>
-                             <AccordionContent>
-                               <div className="max-h-[300px] overflow-auto border rounded-md">
-                                 <Table>
-                                    <TableHeader><TableRow><TableHead>Fila</TableHead><TableHead>Campo</TableHead><TableHead>Valor</TableHead><TableHead>Observación</TableHead></TableRow></TableHeader>
-                                   <TableBody>
-                                     {issues.nums.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row[1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
-                                     {issues.nums.length > 100 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Mostrando 100 de {issues.nums.length}.</TableCell></TableRow>}
-                                   </TableBody>
-                                 </Table>
-                               </div>
-                             </AccordionContent>
-                          </AccordionItem>
-                          <AccordionItem value="item-4">
-                             <AccordionTrigger className="font-semibold flex justify-between w-full">
-                                <span>Valores categóricos inesperados</span>
-                                <Badge variant={issues.cats.length > 0 ? "destructive" : "secondary"}>{issues.cats.length}</Badge>
-                             </AccordionTrigger>
-                             <AccordionContent>
-                               <div className="max-h-[300px] overflow-auto border rounded-md">
-                                 <Table>
-                                    <TableHeader><TableRow><TableHead>Fila</TableHead><TableHead>Campo</TableHead><TableHead>Valor</TableHead><TableHead>Esperado</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                      {issues.cats.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row[1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
-                                      {issues.cats.length > 100 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Mostrando 100 de {issues.cats.length}.</TableCell></TableRow>}
-                                    </TableBody>
-                                 </Table>
-                               </div>
-                             </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
                     </CardContent>
                 </Card>
              </div>
@@ -878,5 +810,7 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
 
 
 
+
+    
 
     
