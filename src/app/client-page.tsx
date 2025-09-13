@@ -14,6 +14,8 @@ import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText } from 'luci
 import Script from 'next/script';
 import { DataProcessingResult } from '@/lib/data-processing';
 import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
+import { generateReportText } from '@/ai/flows/report-flow';
+import { ReportData } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +54,9 @@ export default function ClientPage() {
   const [selectedDpto, setSelectedDpto] = useState<string>('all');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
-  
+  const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
+  const [pdfReportData, setPdfReportData] = useState<ReportData | null>(null);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const now = new Date();
@@ -122,50 +126,58 @@ export default function ClientPage() {
       return;
     }
     setIsGeneratingPdf(true);
-    toast({ title: 'Generando PDF...', description: 'Por favor espere, esto puede tardar un momento.' });
+    toast({ title: 'Generando PDF con IA...', description: 'Redactando análisis, esto puede tardar un momento.' });
 
-    const pdfContentElement = document.getElementById('pdf-content');
-    if (pdfContentElement) {
-        try {
-            const canvas = await html2canvas(pdfContentElement, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
-            
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
+    try {
+        // 1. Generate AI text content
+        const reportText = await generateReportText({
+            results: lastResults,
+            targetIps: selectedIpsForPdf === 'all' ? undefined : selectedIpsForPdf
+        });
+        
+        // 2. Prepare data for the PDF component
+        setPdfReportData({
+            analysisDate: new Date(),
+            period: { year: Number(selectedYear), month: Number(selectedMonth) },
+            results: lastResults,
+            aiContent: reportText,
+            targetIps: selectedIpsForPdf === 'all' ? undefined : selectedIpsForPdf
+        });
 
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const canvasAspectRatio = canvasWidth / canvasHeight;
-            
-            let finalImgWidth = pdfWidth;
-            let finalImgHeight = finalImgWidth / canvasAspectRatio;
+        // 3. Wait for state to update and then render to PDF
+        setTimeout(async () => {
+            const pdfContentElement = document.getElementById('pdf-content');
+            if (pdfContentElement) {
+                const canvas = await html2canvas(pdfContentElement, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+                
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasAspectRatio = canvas.width / canvas.height;
+                let finalImgWidth = pdfWidth;
+                let finalImgHeight = finalImgWidth / canvasAspectRatio;
 
-            if (finalImgHeight > pdfHeight) {
-                finalImgHeight = pdfHeight;
-                finalImgWidth = finalImgHeight * canvasAspectRatio;
+                if (finalImgHeight > pdfHeight) {
+                    finalImgHeight = pdfHeight;
+                    finalImgWidth = finalImgHeight * canvasAspectRatio;
+                }
+                const xPos = (pdfWidth - finalImgWidth) / 2;
+
+                pdf.addImage(imgData, 'PNG', xPos, 0, finalImgWidth, finalImgHeight);
+                
+                const pdfBlob = pdf.output('blob');
+                const url = URL.createObjectURL(pdfBlob);
+                setPdfUrl(url);
+                setIsPdfViewerOpen(true);
             }
+        }, 100); // Small delay to ensure React renders pdfReportData
 
-            const xPos = (pdfWidth - finalImgWidth) / 2;
-            const yPos = 0; // Start from top
-
-            pdf.addImage(imgData, 'PNG', xPos, yPos, finalImgWidth, finalImgHeight);
-            
-            const pdfBlob = pdf.output('blob');
-            const url = URL.createObjectURL(pdfBlob);
-
-            setPdfUrl(url);
-            setIsPdfViewerOpen(true);
-        } catch (error) {
-            console.error("Error generando el PDF:", error);
-            toast({ title: 'Error', description: 'No se pudo generar el PDF.', variant: 'destructive' });
-        } finally {
-            setIsGeneratingPdf(false);
-        }
+    } catch (error) {
+        console.error("Error generando el PDF:", error);
+        toast({ title: 'Error', description: 'No se pudo generar el PDF con IA.', variant: 'destructive' });
+    } finally {
+        setIsGeneratingPdf(false);
     }
  };
 
@@ -355,6 +367,8 @@ export default function ClientPage() {
   };
 
   const departamentos = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.dpto))] : [];
+  const allIps = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.ips))].sort() : [];
+
 
   const filteredGroupedData = lastResults?.groupedData.filter(g => selectedDpto === 'all' || g.keys.dpto === selectedDpto);
 
@@ -368,9 +382,9 @@ export default function ClientPage() {
       />
 
        {/* Contenido oculto para la generación de PDF */}
-        {lastResults && (
-            <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-                <PdfContent id="pdf-content" results={lastResults} formatPercent={formatPercent} />
+        {pdfReportData && (
+            <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '210mm' }}>
+                <PdfContent id="pdf-content" data={pdfReportData} />
             </div>
         )}
 
@@ -681,19 +695,26 @@ export default function ClientPage() {
 
                 <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle>Observaciones de Calidad de Datos</CardTitle>
-                                <CardDescription>Detalles sobre datos que pueden requerir revisión.</CardDescription>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                             <div>
+                                <CardTitle>Observaciones y Exportación</CardTitle>
+                                <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
                             </div>
-                            <div className="flex gap-2">
-                                <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
-                                    <FileDown className="mr-2 h-4 w-4"/>
-                                    Exportar Todo
-                                </Button>
-                                <Button onClick={handleGeneratePdf} variant="outline" disabled={isGeneratingPdf}>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                               <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
+                                  <SelectTrigger className="w-full sm:w-[250px]">
+                                    <SelectValue placeholder="Seleccionar IPS para PDF" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Consolidado Todas las IPS</SelectItem>
+                                    {allIps.map(ips => (
+                                      <SelectItem key={ips} value={ips}>{ips}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={handleGeneratePdf} variant="outline" className="w-full sm:w-auto" disabled={isGeneratingPdf}>
                                      {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
-                                    {isGeneratingPdf ? 'Generando...' : 'GENERAR PDF'}
+                                    {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
                                 </Button>
                             </div>
                         </div>
@@ -710,6 +731,12 @@ export default function ClientPage() {
                                   <ul className="list-disc pl-5 font-mono">
                                    {(kpis.FALTANTES_ENCABEZADOS || []).map((h: string, i: number) => <li key={i}>{h}</li>)}
                                   </ul>
+                                   <div className="mt-4">
+                                      <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
+                                          <FileDown className="mr-2 h-4 w-4"/>
+                                          Exportar Resultados a Excel
+                                      </Button>
+                                  </div>
                                </div>
                              </AccordionContent>
                           </AccordionItem>
@@ -797,12 +824,3 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
-
-    
-    
-
-    
-
-
-
-

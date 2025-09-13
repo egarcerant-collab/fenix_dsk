@@ -8,7 +8,7 @@
  */
 import {ai} from '@/ai/genkit';
 import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
-import {ProcessFileRequestSchema, ProcessFileResponseSchema, ProcessFileInput} from './schemas';
+import {ProcessFileRequestSchema, ProcessFileResponseSchema, ProcessFileInput, ReportDataSchema} from './schemas';
 import * as fs from 'fs';
 import * as path from 'path';
 import {z} from 'zod';
