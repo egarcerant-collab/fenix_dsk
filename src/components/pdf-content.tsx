@@ -119,31 +119,34 @@ export default function PdfContent({ id, data }: PdfContentProps) {
                 <div className="grid grid-cols-3 gap-4">
                    <ChartWrapper title="Indicadores HTA">
                         <ResponsiveContainer>
-                             <BarChart data={chartDataHTA} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                             <BarChart data={chartDataHTA} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 20 }}>
                                 <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 10 }} />
-                                <Bar dataKey="Denominador" fill={chartConfig.Denominador.color} radius={[0, 4, 4, 0]} barSize={12} />
-                                <Bar dataKey="Numerador" fill={chartConfig.Numerador.color} radius={[0, 4, 4, 0]} barSize={12} />
+                                <YAxis dataKey="name" type="category" width={0} tick={false} axisLine={false} tickLine={false} />
+                                <Legend verticalAlign="bottom" height={30} iconSize={10} wrapperStyle={{fontSize: "10px"}} />
+                                <Bar dataKey="Denominador" fill={chartConfig.Denominador.color} radius={[0, 4, 4, 0]} barSize={20} />
+                                <Bar dataKey="Numerador" fill={chartConfig.Numerador.color} radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                    </ChartWrapper>
                    <ChartWrapper title="Indicadores DM">
                         <ResponsiveContainer>
-                             <BarChart data={chartDataDM} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                             <BarChart data={chartDataDM} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 20 }}>
                                 <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 10 }} />
-                                <Bar dataKey="Denominador" fill={chartConfig.Denominador.color} radius={[0, 4, 4, 0]} barSize={12} />
-                                <Bar dataKey="Numerador" fill={chartConfig.Numerador.color} radius={[0, 4, 4, 0]} barSize={12} />
+                                <YAxis dataKey="name" type="category" width={0} tick={false} axisLine={false} tickLine={false} />
+                                <Legend verticalAlign="bottom" height={30} iconSize={10} wrapperStyle={{fontSize: "10px"}} />
+                                <Bar dataKey="Denominador" fill={chartConfig.Denominador.color} radius={[0, 4, 4, 0]} barSize={20} />
+                                <Bar dataKey="Numerador" fill={chartConfig.Numerador.color} radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                    </ChartWrapper>
                    <ChartWrapper title="Otros Tamizajes">
                         <ResponsiveContainer>
-                             <BarChart data={chartDataOtros} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                             <BarChart data={chartDataOtros} layout="vertical" margin={{ top: 5, right: 5, left: 5, bottom: 20 }}>
                                 <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 10 }} />
-                                <Bar dataKey="Denominador" fill={chartConfig.Denominador.color} radius={[0, 4, 4, 0]} barSize={12} />
-                                <Bar dataKey="Numerador" fill={chartConfig.Numerador.color} radius={[0, 4, 4, 0]} barSize={12} />
+                                <YAxis dataKey="name" type="category" width={0} tick={false} axisLine={false} tickLine={false} />
+                                <Legend verticalAlign="bottom" height={30} iconSize={10} wrapperStyle={{fontSize: "10px"}} />
+                                <Bar dataKey="Denominador" fill={chartConfig.Denominador.color} radius={[0, 4, 4, 0]} barSize={20} />
+                                <Bar dataKey="Numerador" fill={chartConfig.Numerador.color} radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                    </ChartWrapper>

@@ -744,33 +744,31 @@ export default function ClientPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader>
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                             <div>
-                                <CardTitle>Observaciones y Exportación</CardTitle>
-                                <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                               <Button onClick={exportResults} variant="outline" className="w-full sm:w-auto" disabled={isGeneratingPdf}>
-                                  <FileDown className="mr-2 h-4 w-4"/>
-                                  Exportar Excel
-                               </Button>
-                               <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
-                                  <SelectTrigger className="w-full sm:w-[250px]">
-                                    <SelectValue placeholder="Seleccionar IPS para PDF" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">Consolidado Todas las IPS</SelectItem>
-                                    {uniqueIpsLocations.map(item => (
-                                      <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Button onClick={handleGeneratePdf} variant="default" className="w-full sm:w-auto" disabled={isGeneratingPdf}>
-                                     {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
-                                    {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
-                                </Button>
-                            </div>
+                    <CardHeader className="flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Observaciones y Exportación</CardTitle>
+                            <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
+                                <FileDown className="mr-2 h-4 w-4"/>
+                                Exportar Excel
+                            </Button>
+                            <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
+                                <SelectTrigger className="w-[280px]">
+                                <SelectValue placeholder="Seleccionar IPS para PDF" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                <SelectItem value="all">Consolidado Todas las IPS</SelectItem>
+                                {uniqueIpsLocations.map(item => (
+                                    <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf}>
+                                {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
+                                {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -877,4 +875,5 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     
 
     
+
 
