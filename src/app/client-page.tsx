@@ -1,5 +1,4 @@
 
-
 "use client";
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
 import Script from 'next/script';
@@ -50,7 +48,6 @@ export default function ClientPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
-  const [selectedDpto, setSelectedDpto] = useState('all');
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
 
   useEffect(() => {
@@ -128,7 +125,7 @@ export default function ClientPage() {
 
     const parseAIContent = (content: string): any[] => {
         if (!content) return [];
-        const cleanContent = content.replace(/<\/?p>|<\/?ul>|<\/?li>/g, '\n').trim();
+        const cleanContent = content.replace(/<\/?p>|<\/?ul>|<\/?li>|<\/?strong>|<\/?ol>/g, '\n').trim();
         const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
         return items;
     };
@@ -156,12 +153,6 @@ export default function ClientPage() {
       calidadDato: parseAIContent(aiContent.dataQuality),
       observaciones: parseAIContent(aiContent.specificObservations),
       compromisos: parseAIContent(aiContent.actions),
-      creditos: {
-        elaboro: 'Epidemiólogo',
-        reviso: 'Gestión de Calidad / Lider Ruta CCVM',
-        aprobo: 'Consejo Directivo',
-        participantes: ['Sandra Marcela Garcerant González (Líder Ruta CCVM)', 'Lirenys Iveth Ordosgoita Blanco (Lider de Ruta CCVM)', 'Eduardo Garcerant (Auditor de la Dirección del Riesgo)']
-      }
     };
   };
 
@@ -244,7 +235,7 @@ export default function ClientPage() {
     const mockAiContent: AIContent = {
         reference: "<p>Análisis de indicadores de gestión del riesgo, sin redacción de IA.</p>",
         summary: "<p>Análisis pendiente. Revisar datos para conclusiones.</p>",
-        dataQuality: "<p>Oportunidades de mejora no analizadas por IA. Revisar datos manualmente.</p>",
+        dataQuality: "<p>Oportunidades de mejora no analizadas por IA. Revisar datos para conclusiones.</p>",
         specificObservations: "<p>Observaciones no generadas. Revisar indicadores.</p>",
         actions: "<p>Compromisos y acciones por definir.</p>",
     };
@@ -493,8 +484,6 @@ export default function ClientPage() {
     Numerador: { label: 'Numerador (Cumplen)', color: 'hsl(var(--primary))' },
     Denominador: { label: 'Denominador (Población)', color: 'hsl(var(--muted))' },
   };
-
-  const departamentos = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.dpto))] : [];
   
   const uniqueIpsLocations = lastResults 
     ? [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()]
@@ -504,10 +493,6 @@ export default function ClientPage() {
         }))
         .sort((a, b) => a.label.localeCompare(b.label))
     : [];
-
-
-  const filteredGroupedData = lastResults?.groupedData.filter(g => selectedDpto === 'all' || g.keys.dpto === selectedDpto);
-
 
   return (
     <>
@@ -641,127 +626,7 @@ export default function ClientPage() {
                         </div>
                     </CardContent>
                 </Card>
-
                  <Card>
-                  <CardHeader>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <CardTitle>Tabla de Indicadores Consolidados</CardTitle>
-                        <CardDescription>Resultados agrupados por Departamento, Municipio e IPS de seguimiento.</CardDescription>
-                      </div>
-                      <div className="w-full sm:w-auto sm:min-w-[200px]">
-                        <Select value={selectedDpto} onValueChange={setSelectedDpto}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Filtrar por Departamento" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos los Departamentos</SelectItem>
-                            {departamentos.map(dpto => (
-                              <SelectItem key={dpto} value={dpto}>{dpto}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                     <Accordion type="single" collapsible className="w-full space-y-2">
-                      {filteredGroupedData && filteredGroupedData.map((g, index) => {
-                        const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
-                        const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
-                        const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
-                        const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
-                        const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
-                        const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
-                        const resultadoCrea = g.results.DENOMINADOR_CREATININA > 0 ? g.results.NUMERADOR_CREATININA / g.results.DENOMINADOR_CREATININA : 0;
-                        const resultadoInasist = g.rowCount > 0 ? g.results.NUMERADOR_INASISTENTE / g.rowCount : 0;
-
-                        return (
-                          <AccordionItem value={`item-${index}`} key={index} className="border rounded-md px-4">
-                            <AccordionTrigger className="py-4 w-full [&>svg]:ml-auto">
-                              <div className="flex flex-col md:flex-row md:items-center md:gap-4 w-full text-left">
-                                <div className="flex-1 mb-2 md:mb-0">
-                                  <div className="font-medium">{g.keys.ips}</div>
-                                  <div className="text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
-                                </div>
-                                <div className="grid grid-cols-5 gap-2 text-center text-sm md:text-base">
-                                  <KpiSummary label="Res. HTA" value={resultadoHTA} />
-                                  <KpiSummary label="Res. DM Adh." value={resultadoDMAdh} />
-                                  <KpiSummary label="Res. DM Cont." value={resultadoDMCont} />
-                                  <KpiSummary label="Res. Crea" value={resultadoCrea} />
-                                  <KpiSummary label="Res. Inasist." value={resultadoInasist} />
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <div className="p-4 bg-muted/50 border-t -mx-4 -mb-4">
-                                  <Accordion type="multiple" className="space-y-2">
-                                    <AccordionItem value="hta-general">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">HTA General</AccordionTrigger>
-                                        <AccordionContent className="pt-2">
-                                            <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
-                                                <KpiDetail label="Pob HTA" value={g.results.DENOMINADOR_HTA_MENORES} />
-                                                <KpiDetail label="Res HTA" value={formatPercent(resultadoHTA)} />
-                                            </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                    <AccordionItem value="hta-edad">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">HTA por Edad</AccordionTrigger>
-                                        <AccordionContent className="pt-2 space-y-2">
-                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num HTA <60" value={g.results.NUMERADOR_HTA_MENORES} />
-                                                <KpiDetail label="Den HTA <60 (Arch.)" value={g.results.DENOMINADOR_HTA_MENORES_ARCHIVO} />
-                                                <KpiDetail label="% <60" value={formatPercent(resultadoMenores)} />
-                                              </div>
-                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num HTA >=60" value={g.results.NUMERADOR_HTA_MAYORES} />
-                                                <KpiDetail label="Den HTA >=60 (Arch.)" value={g.results.DENOMINADOR_HTA_MAYORES} />
-                                                <KpiDetail label="% >=60" value={formatPercent(resultadoMayores)} />
-                                              </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                    <AccordionItem value="dm">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">Resultados DM</AccordionTrigger>
-                                        <AccordionContent className="pt-2 space-y-2">
-                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num DM Adh." value={g.results.NUMERADOR_DM} />
-                                                <KpiDetail label="Pob DM Adh. (Pob.)" value={g.results.POBLACION_DM_TOTAL} />
-                                                <KpiDetail label="% DM Adh." value={formatPercent(resultadoDMAdh)} />
-                                              </div>
-                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num DM Cont." value={g.results.NUMERADOR_DM_CONTROLADOS} />
-                                                <KpiDetail label="Den DM Cont. (Arch.)" value={g.results.DENOMINADOR_DM_CONTROLADOS} />
-                                                <KpiDetail label="% DM Cont." value={formatPercent(resultadoDMCont)} />
-                                              </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                     <AccordionItem value="otros-kpis">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">Otros KPIs</AccordionTrigger>
-                                        <AccordionContent className="pt-2 space-y-2">
-                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num Creatinina" value={g.results.NUMERADOR_CREATININA} />
-                                                <KpiDetail label="Den Creatinina" value={g.results.DENOMINADOR_CREATININA} />
-                                                <KpiDetail label="% Creatinina" value={formatPercent(resultadoCrea)} />
-                                              </div>
-                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num Inasistentes" value={g.results.NUMERADOR_INASISTENTE} />
-                                                <KpiDetail label="Total Filas" value={g.rowCount} />
-                                                <KpiDetail label="% Inasistentes" value={formatPercent(resultadoInasist)} />
-                                              </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                  </Accordion>
-                                </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        );
-                      })}
-                     </Accordion>
-                  </CardContent>
-                </Card>
-
-                <Card>
                   <CardHeader>
                     <CardTitle>Análisis Visual de KPIs</CardTitle>
                     <CardDescription>Comparación visual de pacientes que cumplen (numerador) vs. la población relevante (denominador) para cada indicador.</CardDescription>
@@ -853,25 +718,4 @@ export default function ClientPage() {
   );
 }
 
-const KpiSummary = ({ label, value }: { label: string; value: number }) => {
-  const formatPercent = (val: number) => {
-    if (val === 0) return '0%';
-    if (!val || !Number.isFinite(val)) return 'N/A';
-    return `${(val * 100).toFixed(1)}%`;
-  }
-  return (
-    <div className="text-center">
-      <div className="font-semibold text-muted-foreground">{label}</div>
-      <div className={`font-bold ${value < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-        {formatPercent(value)}
-      </div>
-    </div>
-  );
-};
-
-const KpiDetail = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="flex flex-col items-center justify-center p-2 border rounded-md bg-background text-center h-full">
-        <div className="font-bold text-primary">{value}</div>
-        <div className="text-muted-foreground mt-1">{label}</div>
-    </div>
-);
+    
