@@ -269,10 +269,10 @@ export default function ClientPage() {
         onLoad={() => setXlsxLoaded(true)}
       />
 
-      <div className="min-h-screen bg-background text-foreground font-sans">
+      <div className="min-h-screen bg-background text-foreground font-sans text-base">
         <header className="bg-card py-4 px-6 border-b">
           <div className="container mx-auto flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-primary">Excel Data Insights</h1>
+            <h1 className="font-bold text-primary">Excel Data Insights</h1>
             <Badge variant={xlsxLoaded ? "secondary" : "destructive"}>
               <Library className="mr-2 h-4 w-4"/>
               XLSX: {xlsxLoaded ? 'Cargado' : 'No Cargado'}
@@ -284,7 +284,7 @@ export default function ClientPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Cargue y Configuración</CardTitle>
-              <CardDescription>Seleccione el archivo de datos y el período a analizar. La población HTA y DM se cruzará con el archivo <code>Poblacion 2025</code> del servidor.</CardDescription>
+              <CardDescription>Seleccione el archivo de datos y el período a analizar. La población HTA y DM se cruzará con el archivo <code>Poblacion 2025.csv</code> del servidor.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
@@ -339,10 +339,10 @@ export default function ClientPage() {
 
               {isProcessing && (
                 <div className="mt-6 border-t pt-4">
-                  <Label className="text-sm font-medium text-muted-foreground">{status}</Label>
+                  <Label className="font-medium text-muted-foreground">{status}</Label>
                   <div className="flex items-center gap-3 mt-2">
                     <Progress value={progress} className="w-full h-2" />
-                    <span className="text-sm font-semibold min-w-[4ch] text-right">{Math.round(progress)}%</span>
+                    <span className="font-semibold min-w-[4ch] text-right">{Math.round(progress)}%</span>
                   </div>
                 </div>
               )}
@@ -359,30 +359,30 @@ export default function ClientPage() {
                     <CardContent className="flex flex-col gap-8">
                         {kpiGroups.map((group, index) => (
                           <div key={index} className="space-y-4">
-                            <h3 className="text-lg font-semibold text-card-foreground">{group.title}</h3>
+                            <h3 className="font-semibold text-card-foreground">{group.title}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {group.cards.map(({ label, key, description, isPercentage, value }) => (
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
-                                           <p className="text-4xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
-                                           <p className="text-sm font-semibold mt-1">{label}</p>
+                                           <p className="text-2xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
+                                           <p className="font-semibold mt-1">{label}</p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-2">{description}</p>
+                                        <p className="text-muted-foreground mt-2">{description}</p>
                                     </Card>
                                 ))}
                             </div>
                           </div>
                         ))}
                          <div className="border-t pt-8 space-y-4">
-                            <h3 className="text-lg font-semibold text-card-foreground">Otros Indicadores y Métricas</h3>
+                            <h3 className="font-semibold text-card-foreground">Otros Indicadores y Métricas</h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                {otherKpis.map(({ label, key, description }) => (
                                     <Card key={key} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
-                                            <p className="text-4xl font-bold text-primary">{(kpis as any)[key] ?? 0}</p>
-                                            <p className="text-sm font-semibold mt-1">{label}</p>
+                                            <p className="text-2xl font-bold text-primary">{(kpis as any)[key] ?? 0}</p>
+                                            <p className="font-semibold mt-1">{label}</p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-2">{description}</p>
+                                        <p className="text-muted-foreground mt-2">{description}</p>
                                     </Card>
                                ))}
                             </div>
@@ -428,24 +428,24 @@ export default function ClientPage() {
                               <div className="flex flex-col md:flex-row md:items-center md:gap-4 w-full text-left">
                                 <div className="flex-1 mb-2 md:mb-0">
                                   <div className="font-medium">{g.keys.ips}</div>
-                                  <div className="text-sm text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
+                                  <div className="text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
                                 </div>
-                                <div className="flex gap-4 text-sm">
+                                <div className="flex gap-4">
                                   <div className="text-center">
-                                    <div className="font-semibold text-muted-foreground text-xs">Res. HTA</div>
-                                    <div className={`font-bold text-lg ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                    <div className="font-semibold text-muted-foreground">Res. HTA</div>
+                                    <div className={`font-bold ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
                                       {formatPercent(resultadoHTA)}
                                     </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="font-semibold text-muted-foreground text-xs">Res. DM Adh.</div>
-                                    <div className={`font-bold text-lg ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                    <div className="font-semibold text-muted-foreground">Res. DM Adh.</div>
+                                    <div className={`font-bold ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
                                       {formatPercent(resultadoDMAdh)}
                                     </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="font-semibold text-muted-foreground text-xs">Res. DM Cont.</div>
-                                    <div className={`font-bold text-lg ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                    <div className="font-semibold text-muted-foreground">Res. DM Cont.</div>
+                                    <div className={`font-bold ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
                                       {formatPercent(resultadoDMCont)}
                                     </div>
                                   </div>
@@ -456,7 +456,7 @@ export default function ClientPage() {
                                 <div className="p-4 bg-muted/50 border-t -mx-4 -mb-4">
                                   <Accordion type="multiple" className="space-y-2">
                                     <AccordionItem value="hta-general">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">HTA General</AccordionTrigger>
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">HTA General</AccordionTrigger>
                                         <AccordionContent className="pt-2">
                                             <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
@@ -466,7 +466,7 @@ export default function ClientPage() {
                                         </AccordionContent>
                                     </AccordionItem>
                                     <AccordionItem value="hta-edad">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">HTA por Edad</AccordionTrigger>
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">HTA por Edad</AccordionTrigger>
                                         <AccordionContent className="pt-2 space-y-2">
                                               <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num HTA <60" value={g.results.NUMERADOR_HTA_MENORES} />
@@ -481,7 +481,7 @@ export default function ClientPage() {
                                         </AccordionContent>
                                     </AccordionItem>
                                     <AccordionItem value="dm">
-                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">Resultados DM</AccordionTrigger>
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 font-semibold">Resultados DM</AccordionTrigger>
                                         <AccordionContent className="pt-2 space-y-2">
                                               <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num DM Adh." value={g.results.NUMERADOR_DM} />
@@ -572,20 +572,20 @@ export default function ClientPage() {
                     <CardContent>
                          <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="item-1">
-                             <AccordionTrigger className="text-base font-semibold flex justify-between w-full">
+                             <AccordionTrigger className="font-semibold flex justify-between w-full">
                                 <span>Columnas esperadas no encontradas</span> 
                                 <Badge variant={kpis.FALTANTES_ENCABEZADOS?.length > 0 ? "destructive" : "secondary"}>{kpis.FALTANTES_ENCABEZADOS?.length || 0}</Badge>
                              </AccordionTrigger>
                              <AccordionContent>
                                <div className="max-h-[300px] overflow-auto border rounded-md p-4 bg-muted/50">
-                                  <ul className="list-disc pl-5 text-sm font-mono">
+                                  <ul className="list-disc pl-5 font-mono">
                                    {(kpis.FALTANTES_ENCABEZADOS || []).map((h: string, i: number) => <li key={i}>{h}</li>)}
                                   </ul>
                                </div>
                              </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="item-2">
-                             <AccordionTrigger className="text-base font-semibold flex justify-between w-full">
+                             <AccordionTrigger className="font-semibold flex justify-between w-full">
                                <span>Fechas con formato dudoso</span>
                                <Badge variant={issues.dates.length > 0 ? "destructive" : "secondary"}>{issues.dates.length}</Badge>
                               </AccordionTrigger>
@@ -602,7 +602,7 @@ export default function ClientPage() {
                              </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="item-3">
-                             <AccordionTrigger className="text-base font-semibold flex justify-between w-full">
+                             <AccordionTrigger className="font-semibold flex justify-between w-full">
                                 <span>Campos numéricos inválidos</span>
                                 <Badge variant={issues.nums.length > 0 ? "destructive" : "secondary"}>{issues.nums.length}</Badge>
                              </AccordionTrigger>
@@ -619,7 +619,7 @@ export default function ClientPage() {
                              </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="item-4">
-                             <AccordionTrigger className="text-base font-semibold flex justify-between w-full">
+                             <AccordionTrigger className="font-semibold flex justify-between w-full">
                                 <span>Valores categóricos inesperados</span>
                                 <Badge variant={issues.cats.length > 0 ? "destructive" : "secondary"}>{issues.cats.length}</Badge>
                              </AccordionTrigger>
@@ -648,11 +648,7 @@ export default function ClientPage() {
 
 const KpiDetail = ({ label, value }: { label: string; value: string | number }) => (
     <div className="flex flex-col items-center justify-center p-2 border rounded-md bg-background text-center h-full">
-        <div className="text-lg font-bold text-primary">{value}</div>
-        <div className="text-xs text-muted-foreground mt-1">{label}</div>
+        <div className="font-bold text-primary">{value}</div>
+        <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
-
-    
-
-    
