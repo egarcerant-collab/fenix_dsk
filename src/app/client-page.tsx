@@ -452,7 +452,7 @@ export default function ClientPage() {
                                       {formatPercent(resultadoDMCont)}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                       <AccordionTrigger>
+                                       <AccordionTrigger asChild>
                                          <Button variant="ghost" size="sm">
                                             <ChevronsUpDown className="h-4 w-4"/>
                                          </Button>
