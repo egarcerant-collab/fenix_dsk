@@ -1,4 +1,5 @@
 
+
 "use client";
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
@@ -597,7 +598,8 @@ export default function ClientPage() {
                                               </div>
                                               <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
                                                 <KpiDetail label="Num HTA ≥60" value={g.results.NUMERADOR_HTA_MAYORES} />
-                                                <KpiDetail label="Den HTA ≥60 (Arch.)" value={g.results.DENOMINADOR_HTA_MAYORES} />
+                                                <KpiDetail label="Den HTA ≥60 (Arch.
+)" value={g.results.DENOMINADOR_HTA_MAYORES} />
                                                 <KpiDetail label="% ≥60" value={formatPercent(resultadoMayores)} />
                                               </div>
                                         </AccordionContent>
@@ -701,6 +703,10 @@ export default function ClientPage() {
                                 <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2 w-full sm:w-auto">
+                               <Button onClick={exportResults} variant="outline" className="w-full sm:w-auto" disabled={isGeneratingPdf}>
+                                  <FileDown className="mr-2 h-4 w-4"/>
+                                  Exportar Excel
+                               </Button>
                                <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
                                   <SelectTrigger className="w-full sm:w-[250px]">
                                     <SelectValue placeholder="Seleccionar IPS para PDF" />
@@ -712,7 +718,7 @@ export default function ClientPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <Button onClick={handleGeneratePdf} variant="outline" className="w-full sm:w-auto" disabled={isGeneratingPdf}>
+                                <Button onClick={handleGeneratePdf} variant="default" className="w-full sm:w-auto" disabled={isGeneratingPdf}>
                                      {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
                                     {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
                                 </Button>
@@ -731,12 +737,6 @@ export default function ClientPage() {
                                   <ul className="list-disc pl-5 font-mono">
                                    {(kpis.FALTANTES_ENCABEZADOS || []).map((h: string, i: number) => <li key={i}>{h}</li>)}
                                   </ul>
-                                   <div className="mt-4">
-                                      <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
-                                          <FileDown className="mr-2 h-4 w-4"/>
-                                          Exportar Resultados a Excel
-                                      </Button>
-                                  </div>
                                </div>
                              </AccordionContent>
                           </AccordionItem>
@@ -825,5 +825,7 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     </div>
 );
 
+
+    
 
     
