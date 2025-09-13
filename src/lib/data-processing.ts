@@ -191,9 +191,6 @@ const computeMetrics = (
 ): Omit<DataProcessingResult, 'headers' | 'rawRows' | 'headerMap' | 'R'> & { R: KpiResults & { TOTAL_FILAS: number } } => {
     const issues: DataIssues = { dates: [], nums: [], cats: [] };
 
-    let totalPoblacionDM = 0;
-    let totalPoblacionHTA = 0;
-
     const R_accumulator: KpiResults = {
         NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
         DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
@@ -217,7 +214,6 @@ const computeMetrics = (
         const groupKey = `${dpto}|${municipio}|${ips}`;
 
         if (!groupedResults.has(groupKey)) {
-             const pop = populationMap.get(groupKey) || { hta: 0, dm: 0 };
              groupedResults.set(groupKey, {
                 keys: { dpto, municipio, ips },
                 results: { 
@@ -237,36 +233,31 @@ const computeMetrics = (
         const kpiInput = getKpiInputForRow(row, headerMap, range6m, range12m);
         const kpiResults = computeAllKpisForRow(kpiInput);
         
-        if (kpiInput.htaN === 'SI') {
-            group.results.DENOMINADOR_HTA_MENORES++;
-            totalPoblacionHTA++;
-        }
-        if (kpiInput.dmN === 'SI') {
-            group.results.POBLACION_DM_TOTAL++;
-            totalPoblacionDM++;
-        }
-
-
         group.rowCount++;
         
         Object.keys(kpiResults).forEach(keyStr => {
             const key = keyStr as keyof KpiResults;
-            // This is safe because POBLACION_DM_TOTAL and DENOMINADOR_HTA_MENORES are not in kpiResults
             group.results[key] = (group.results[key] || 0) + kpiResults[key];
         });
         
         if (i0 % batch === 0 || i0 === rawRows.length - 1) onProgress(((i0 + 1) / total) * 90 + 10, `Procesando fila ${i0 + 1} de ${total}…`);
     }
     
-    // Sum up everything for the main accumulator and apply fallbacks
-    const calculableKeys = Object.keys(computeAllKpisForRow({} as any)) as (keyof Omit<KpiResults, 'POBLACION_DM_TOTAL' | 'DENOMINADOR_HTA_MENORES'>)[];
-
-    for (const key of calculableKeys) {
-        R_accumulator[key] = Array.from(groupedResults.values()).reduce((acc, g) => acc + g.results[key], 0);
-    }
     
-    R_accumulator.POBLACION_DM_TOTAL = totalPoblacionDM;
-    R_accumulator.DENOMINADOR_HTA_MENORES = totalPoblacionHTA;
+    // Aggregate results for the entire file
+    for (const group of groupedResults.values()) {
+        const popData = populationMap.get(`${group.keys.dpto}|${group.keys.municipio}|${group.keys.ips}`) || { hta: 0, dm: 0 };
+        
+        // Use population file data if available, otherwise use counts from the uploaded file for that group
+        group.results.DENOMINADOR_HTA_MENORES = popData.hta > 0 ? popData.hta : group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
+        group.results.POBLACION_DM_TOTAL = popData.dm > 0 ? popData.dm : group.results.NUMERADOR_DM;
+        
+        // Accumulate totals
+        Object.keys(R_accumulator).forEach(keyStr => {
+            const key = keyStr as keyof KpiResults;
+            R_accumulator[key] += group.results[key];
+        });
+    }
 
     const groupedData = Array.from(groupedResults.values()).sort((a, b) => {
         if (a.keys.dpto < b.keys.dpto) return -1; if (a.keys.dpto > b.keys.dpto) return 1;
