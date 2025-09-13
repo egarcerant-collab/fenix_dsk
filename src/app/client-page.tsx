@@ -420,7 +420,7 @@ export default function ClientPage() {
                             <TableHead>Res. HTA</TableHead>
                             <TableHead>Res. DM Adh.</TableHead>
                             <TableHead>Res. DM Cont.</TableHead>
-                            <TableHead className="text-right w-[100px]">Ver Más</TableHead>
+                            <TableHead className="text-right w-[100px]"><span className="sr-only">Ver Más</span></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
