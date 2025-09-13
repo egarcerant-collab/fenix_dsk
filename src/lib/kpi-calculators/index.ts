@@ -102,8 +102,8 @@ function calculateDenominadorHtaMenoresArchivo(input: KpiInput): number {
 }
 
 function calculateNumeradorCreatinina(input: KpiInput): number {
-    const { fechaCOk, dmN } = input;
-    if (dmN === 'SI' && fechaCOk) {
+    const { fechaCOk } = input;
+    if (fechaCOk) {
         return 1;
     }
     return 0;
