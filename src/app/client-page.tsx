@@ -11,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText } from 'lucide-react';
+import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult } from '@/lib/data-processing';
 import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
-import { ReportData } from '@/ai/schemas';
+import { ReportData, AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import PdfViewer from '@/components/pdf-viewer';
 import PdfContent from '@/components/pdf-content';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import JSZip from 'jszip';
 
 
 // Make XLSX global if it's loaded from a script
@@ -223,6 +224,98 @@ export default function ClientPage() {
  };
 
 
+  const handleBulkGeneratePdf = async () => {
+    if (!lastResults) {
+      toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
+      return;
+    }
+    setIsGeneratingPdf(true);
+    toast({ title: 'Generando PDFs Masivos...', description: 'Esto puede tardar varios minutos. No cierre la ventana.' });
+
+    const zip = new JSZip();
+    const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
+
+    // Mock AI content for fast generation
+    const mockAiContent: AIContent = {
+        reference: "<p>Análisis de indicadores de gestión del riesgo, sin redacción de IA.</p>",
+        summary: "<p>Análisis pendiente. Revisar datos para conclusiones.</p>",
+        dataQuality: "<p>Oportunidades de mejora no analizadas por IA. Revisar datos manualmente.</p>",
+        specificObservations: "<p>Observaciones no generadas. Revisar indicadores.</p>",
+        actions: "<p>Compromisos y acciones por definir.</p>",
+    };
+    
+    try {
+        for (const group of lastResults.groupedData) {
+            const { ips, municipio } = group.keys;
+            toast({ title: `Generando: ${ips} - ${municipio}`, description: 'Por favor, espere...' });
+            
+            const resultsForPdf: DataProcessingResult = {
+                ...lastResults,
+                R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
+                groupedData: [group],
+            };
+
+            const reportData: ReportData = {
+                analysisDate: new Date(),
+                period: { year: Number(selectedYear), month: Number(selectedMonth) },
+                results: resultsForPdf,
+                aiContent: mockAiContent,
+                targetIps: ips,
+                targetMunicipio: municipio,
+            };
+            
+            setPdfReportData(reportData);
+
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait for render
+
+            const pdfContentElement = document.getElementById('pdf-content');
+            if (pdfContentElement) {
+                const canvas = await html2canvas(pdfContentElement, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+                
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageMargin = 4;
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const contentWidth = pdfWidth - (pageMargin * 2);
+
+                const canvasAspectRatio = canvas.width / canvas.height;
+                const finalImgWidth = contentWidth;
+                const finalImgHeight = finalImgWidth / canvasAspectRatio;
+                
+                const xPos = pageMargin;
+                const yPos = pageMargin;
+
+                pdf.addImage(imgData, 'PNG', xPos, yPos, finalImgWidth, finalImgHeight);
+                const pdfBlob = pdf.output('blob');
+                
+                const fileName = `Informe_${ips.replace(/\s/g, '_')}_${municipio.replace(/\s/g, '_')}.pdf`;
+                zip.file(fileName, pdfBlob);
+            }
+        }
+
+        toast({ title: 'Comprimiendo archivos...', description: 'Preparando la descarga del archivo ZIP.' });
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Informes_Masivos_${monthName}_${selectedYear}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        toast({ title: 'Éxito', description: 'La descarga del archivo ZIP ha comenzado.' });
+
+    } catch (error) {
+        console.error("Error generando el ZIP de PDFs:", error);
+        toast({ title: 'Error', description: 'No se pudo generar el archivo ZIP.', variant: 'destructive' });
+    } finally {
+        setIsGeneratingPdf(false);
+        setPdfReportData(null); 
+    }
+  };
+
+
   const exportResults = () => {
     if (!lastResults) { 
         toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
@@ -326,9 +419,9 @@ export default function ClientPage() {
     {
       title: 'Resultado HTA >= 60 años',
       cards: [
-        { label: 'HTA Controlado ≥60 (Numerador)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (≥60a, sin DM) con PA < 150/90.' },
-        { label: 'Población HTA ≥60 (Denominador)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (≥60a, sin DM) del archivo cargado.' },
-        { label: 'Resultado HTA ≥60', key: 'RESULTADO_HTA_MAYORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador / Denominador)' },
+        { label: 'HTA Controlado >=60 (Numerador)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (>=60a, sin DM) con PA < 150/90.' },
+        { label: 'Población HTA >=60 (Denominador)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (>=60a, sin DM) del archivo cargado.' },
+        { label: 'Resultado HTA >=60', key: 'RESULTADO_HTA_MAYORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador / Denominador)' },
       ]
     },
      {
@@ -645,10 +738,10 @@ export default function ClientPage() {
                                                 <KpiDetail label="% <60" value={formatPercent(resultadoMenores)} />
                                               </div>
                                               <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                <KpiDetail label="Num HTA ≥60" value={g.results.NUMERADOR_HTA_MAYORES} />
-                                                <KpiDetail label="Den HTA ≥60 (Arch.
+                                                <KpiDetail label="Num HTA >=60" value={g.results.NUMERADOR_HTA_MAYORES} />
+                                                <KpiDetail label="Den HTA >=60 (Arch.
 )" value={g.results.DENOMINADOR_HTA_MAYORES} />
-                                                <KpiDetail label="% ≥60" value={formatPercent(resultadoMayores)} />
+                                                <KpiDetail label="% >=60" value={formatPercent(resultadoMayores)} />
                                               </div>
                                         </AccordionContent>
                                     </AccordionItem>
@@ -749,13 +842,13 @@ export default function ClientPage() {
                         <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
                                 <FileDown className="mr-2 h-4 w-4"/>
                                 Exportar Excel
                             </Button>
                             <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
-                                <SelectTrigger className="w-[280px]">
+                                <SelectTrigger className="w-full sm:w-[280px]">
                                 <SelectValue placeholder="Seleccionar IPS para PDF" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -768,6 +861,10 @@ export default function ClientPage() {
                             <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf}>
                                 {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
                                 {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
+                            </Button>
+                             <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf}>
+                                {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
+                                {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
                             </Button>
                         </div>
                     </CardContent>
