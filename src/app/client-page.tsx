@@ -247,14 +247,26 @@ export default function ClientPage() {
           description: '(Numerador / Denominador)' 
         },
       ]
+    },
+    {
+        title: 'Resultado Inasistentes',
+        cards: [
+            { label: 'Inasistentes a Control', key: 'NUMERADOR_INASISTENTE', description: 'Pacientes con fecha de PA registrada pero fuera de los últimos 6 meses.' },
+            { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
+            { 
+                label: 'Resultado Inasistentes', 
+                key: 'RESULTADO_INASISTENTES',
+                isPercentage: true, 
+                value: formatPercent(kpis.TOTAL_FILAS > 0 ? kpis.NUMERADOR_INASISTENTE / kpis.TOTAL_FILAS : 0),
+                description: '(Inasistentes / Total Filas)' 
+            },
+        ]
     }
   ] : [];
 
   const otherKpis = kpis ? [
-    { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
     { label: 'HbA1c Tomada (DM)', key: 'NUMERADOR_HBA1C', description: 'Pacientes DM con HbA1c en últimos 6 meses.' },
     { label: 'Microalbuminuria Tomada (DM)', key: 'NUMERADOR_MICROALBUMINURIA', description: 'Pacientes DM con microalbuminuria en últimos 12 meses.' },
-    { label: 'Inasistentes a Control', key: 'NUMERADOR_INASISTENTE', description: 'Pacientes con fecha de PA registrada pero fuera de los últimos 6 meses.' },
   ] : [];
 
   const issues = lastResults?.issues || { dates: [], nums: [], cats: [] };
@@ -684,4 +696,6 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
 );
 
     
+    
+
     
