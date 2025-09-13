@@ -17,6 +17,10 @@ import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
+import PdfViewer from '@/components/pdf-viewer';
+import PdfContent from '@/components/pdf-content';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 
 // Make XLSX global if it's loaded from a script
@@ -38,6 +42,7 @@ export default function ClientPage() {
   const { toast } = useToast();
   const [xlsxLoaded, setXlsxLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('Listo para procesar.');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,6 +50,8 @@ export default function ClientPage() {
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
   const [selectedDpto, setSelectedDpto] = useState<string>('all');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -108,6 +115,44 @@ export default function ClientPage() {
     }
      startProcessing(processLocalTestFile(Number(selectedYear), Number(selectedMonth)));
  }
+
+ const handleGeneratePdf = async () => {
+    if (!lastResults) {
+      toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
+      return;
+    }
+    setIsGeneratingPdf(true);
+    toast({ title: 'Generando PDF...', description: 'Por favor espere, esto puede tardar un momento.' });
+
+    const pdfContentElement = document.getElementById('pdf-content');
+    if (pdfContentElement) {
+        try {
+            const canvas = await html2canvas(pdfContentElement, {
+                scale: 2, // Aumentar la escala para mejor resolución
+                useCORS: true,
+                logging: false,
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            const pdfBlob = pdf.output('blob');
+            const url = URL.createObjectURL(pdfBlob);
+
+            setPdfUrl(url);
+            setIsPdfViewerOpen(true);
+        } catch (error) {
+            console.error("Error generando el PDF:", error);
+            toast({ title: 'Error', description: 'No se pudo generar el PDF.', variant: 'destructive' });
+        } finally {
+            setIsGeneratingPdf(false);
+        }
+    }
+ };
 
 
   const exportResults = () => {
@@ -306,6 +351,23 @@ export default function ClientPage() {
         strategy="lazyOnload"
         onLoad={() => setXlsxLoaded(true)}
       />
+
+       {/* Contenido oculto para la generación de PDF */}
+        {lastResults && (
+            <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+                <PdfContent id="pdf-content" results={lastResults} formatPercent={formatPercent} />
+            </div>
+        )}
+
+        {/* Visualizador de PDF */}
+        {pdfUrl && (
+            <PdfViewer
+                isOpen={isPdfViewerOpen}
+                onClose={() => setIsPdfViewerOpen(false)}
+                pdfUrl={pdfUrl}
+            />
+        )}
+
 
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
@@ -610,13 +672,13 @@ export default function ClientPage() {
                                 <CardDescription>Detalles sobre datos que pueden requerir revisión.</CardDescription>
                             </div>
                             <div className="flex gap-2">
-                                <Button onClick={exportResults} variant="outline">
+                                <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
                                     <FileDown className="mr-2 h-4 w-4"/>
                                     Exportar Todo
                                 </Button>
-                                <Button variant="outline">
-                                    <FileText className="mr-2 h-4 w-4"/>
-                                    GENERAR PDF
+                                <Button onClick={handleGeneratePdf} variant="outline" disabled={isGeneratingPdf}>
+                                     {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
+                                    {isGeneratingPdf ? 'Generando...' : 'GENERAR PDF'}
                                 </Button>
                             </div>
                         </div>
@@ -725,4 +787,5 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     
 
     
+
 
