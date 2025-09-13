@@ -33,6 +33,7 @@ export const ReportDataSchema = z.object({
     results: ProcessFileResponseSchema,
     aiContent: AIContentSchema,
     targetIps: z.string().optional(),
+    targetMunicipio: z.string().optional(),
 });
 
 export type ReportData = z.infer<typeof ReportDataSchema>;
@@ -40,6 +41,7 @@ export type ReportData = z.infer<typeof ReportDataSchema>;
 export const ReportRequestSchema = z.object({
     results: ProcessFileResponseSchema,
     targetIps: z.string().optional().describe("La IPS específica a analizar. Si no se provee, el análisis es consolidado."),
+    targetMunicipio: z.string().optional().describe("El municipio específico de la IPS a analizar."),
     corte: z.object({
         year: z.number(),
         month: z.number(),
@@ -48,3 +50,4 @@ export const ReportRequestSchema = z.object({
 });
 
 export type ReportRequest = z.infer<typeof ReportRequestSchema>;
+

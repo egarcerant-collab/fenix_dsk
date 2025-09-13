@@ -24,8 +24,8 @@ const reportGenerationPrompt = ai.definePrompt({
         The output must be in Spanish.
 
         DATA PROVIDED:
-        - Analysis for: {{#if targetIps}}"{{targetIps}}"{{else}}"Consolidated all IPS"{{/if}}
-        - Analysis Period: Month {{corte.month}}, Year {{corte.year}}
+        - Analysis for: {{#if targetIps}}"{{targetIps}}"{{#if targetMunicipio}} en el municipio de "{{targetMunicipio}}"{{/if}}{{else}}"Consolidado all IPS"{{/if}}
+        - Analysis Period: Month {{corte.monthName}}, Year {{corte.year}}
         - Total rows in the processed file: {{results.R.TOTAL_FILAS}}
         - Total HTA Population (from population file): {{results.R.DENOMINADOR_HTA_MENORES}}
         - Total DM Population (from population file): {{results.R.POBLACION_DM_TOTAL}}
@@ -71,3 +71,4 @@ const reportGenerationFlow = ai.defineFlow(
     return output;
   }
 );
+

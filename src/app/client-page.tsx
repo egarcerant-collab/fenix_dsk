@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from '@/components/ui/badge';
 import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText } from 'lucide-react';
 import Script from 'next/script';
-import { DataProcessingResult } from '@/lib/data-processing';
+import { DataProcessingResult, GroupedResult } from '@/lib/data-processing';
 import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { ReportData } from '@/ai/schemas';
@@ -132,10 +132,36 @@ export default function ClientPage() {
     try {
         const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
 
+        let resultsForPdf: DataProcessingResult = lastResults;
+        let targetIps: string | undefined;
+        let targetMunicipio: string | undefined;
+        
+        if (selectedIpsForPdf !== 'all') {
+            const [ips, municipio] = selectedIpsForPdf.split('|');
+            targetIps = ips;
+            targetMunicipio = municipio;
+
+            const specificGroupData: GroupedResult | undefined = lastResults.groupedData.find(
+                g => g.keys.ips === targetIps && g.keys.municipio === targetMunicipio
+            );
+            
+            if (specificGroupData) {
+                // To create a "mini" DataProcessingResult for a single group
+                resultsForPdf = {
+                    ...lastResults,
+                    R: { ...specificGroupData.results, TOTAL_FILAS: specificGroupData.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
+                    groupedData: [specificGroupData],
+                };
+            } else {
+                 throw new Error(`No se encontraron datos para ${targetIps} en ${targetMunicipio}`);
+            }
+        }
+
         // 1. Generate AI text content
         const reportText = await generateReportText({
-            results: lastResults,
-            targetIps: selectedIpsForPdf === 'all' ? undefined : selectedIpsForPdf,
+            results: resultsForPdf,
+            targetIps: targetIps,
+            targetMunicipio: targetMunicipio,
             corte: {
                 year: Number(selectedYear),
                 month: Number(selectedMonth),
@@ -147,9 +173,10 @@ export default function ClientPage() {
         setPdfReportData({
             analysisDate: new Date(),
             period: { year: Number(selectedYear), month: Number(selectedMonth) },
-            results: lastResults,
+            results: resultsForPdf,
             aiContent: reportText,
-            targetIps: selectedIpsForPdf === 'all' ? undefined : selectedIpsForPdf
+            targetIps: targetIps,
+            targetMunicipio: targetMunicipio
         });
 
         // 3. Wait for state to update and then render to PDF
@@ -381,7 +408,15 @@ export default function ClientPage() {
   };
 
   const departamentos = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.dpto))] : [];
-  const allIps = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.ips))].sort() : [];
+  
+  const uniqueIpsLocations = lastResults 
+    ? [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()]
+        .map(item => ({
+            value: `${item.keys.ips}|${item.keys.municipio}`,
+            label: `${item.keys.ips} - ${item.keys.municipio}`
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+    : [];
 
 
   const filteredGroupedData = lastResults?.groupedData.filter(g => selectedDpto === 'all' || g.keys.dpto === selectedDpto);
@@ -726,8 +761,8 @@ export default function ClientPage() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="all">Consolidado Todas las IPS</SelectItem>
-                                    {allIps.map(ips => (
-                                      <SelectItem key={ips} value={ips}>{ips}</SelectItem>
+                                    {uniqueIpsLocations.map(item => (
+                                      <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
@@ -842,3 +877,4 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     
 
     
+
