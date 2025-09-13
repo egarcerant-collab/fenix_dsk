@@ -152,7 +152,9 @@ export default function ClientPage() {
             'RESULTADO_DM': resultadoDM,
             'NUMERADOR_DM_CONTROLADOS': g.results.NUMERADOR_DM_CONTROLADOS,
             'DENOMINADOR_DM_CONTROLADOS': denominadorDM,
-            '%_DM_CONTROLADOS': resultadoDM
+            '%_DM_CONTROLADOS': resultadoDM,
+            'NUMERADOR_CREATININA': g.results.NUMERADOR_CREATININA,
+            'DENOMINADOR_CREATININA': g.results.DENOMINADOR_CREATININA,
         };
     });
 
@@ -236,7 +238,8 @@ export default function ClientPage() {
 
   const otherKpis = kpis ? [
     { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
-    { label: 'Creatinina Tomada (DM)', key: 'NUMERADOR_CREATININA', description: 'Pacientes DM con creatinina en últimos 12 meses.' },
+    { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes DM con creatinina en últimos 12 meses.' },
+    { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
     { label: 'HbA1c Tomada (DM)', key: 'NUMERADOR_HBA1C', description: 'Pacientes DM con HbA1c en últimos 6 meses.' },
     { label: 'Microalbuminuria Tomada (DM)', key: 'NUMERADOR_MICROALBUMINURIA', description: 'Pacientes DM con microalbuminuria en últimos 12 meses.' },
     { label: 'Inasistentes a Control', key: 'NUMERADOR_INASISTENTE', description: 'Pacientes con fecha de PA registrada pero fuera de los últimos 6 meses.' },
@@ -256,7 +259,7 @@ export default function ClientPage() {
   ] : [];
 
   const chartDataOtros = kpis ? [
-      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
+      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_CREATININA },
       { name: 'HbA1c Tomada', Numerador: kpis.NUMERADOR_HBA1C, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
       { name: 'Microalbuminuria Tomada', Numerador: kpis.NUMERADOR_MICROALBUMINURIA, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
   ] : [];
@@ -374,7 +377,7 @@ export default function ClientPage() {
                     <CardContent className="flex flex-col gap-8">
                         {kpiGroups.map((group, index) => (
                           <div key={index} className="space-y-4">
-                            <h3 className="font-semibold text-card-foreground">{group.title}</h3>
+                            <h3 className="font-semibold text-card-foreground" dangerouslySetInnerHTML={{ __html: group.title }}></h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {group.cards.map(({ label, key, description, isPercentage, value }) => (
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
@@ -626,7 +629,7 @@ export default function ClientPage() {
                                  <Table>
                                     <TableHeader><TableRow><TableHead>Fila</TableHead><TableHead>Campo</TableHead><TableHead>Valor</TableHead><TableHead>Observación</TableHead></TableRow></TableHeader>
                                    <TableBody>
-                                     {issues.nums.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row[1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
+                                     {issues.nums.slice(0, 100).map((row, i) => <TableRow key={i}><TableCell>{row[0]}</TableCell><TableCell>{row.1]}</TableCell><TableCell>{row[2]}</TableCell><TableCell>{row[3]}</TableCell></TableRow>)}
                                      {issues.nums.length > 100 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Mostrando 100 de {issues.nums.length}.</TableCell></TableRow>}
                                    </TableBody>
                                  </Table>
@@ -667,3 +670,5 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-muted-foreground mt-1">{label}</div>
     </div>
 );
+
+    

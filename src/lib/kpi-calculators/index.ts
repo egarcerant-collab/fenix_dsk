@@ -11,6 +11,7 @@ export interface KpiInput {
     fechaHbOk: boolean;
     fechaCOk: boolean;
     fechaAlbOk: boolean;
+    fechaCreatininaRaw: any;
 }
 
 export interface KpiResults {
@@ -25,6 +26,7 @@ export interface KpiResults {
     DENOMINADOR_HTA_MENORES: number; 
     DENOMINADOR_HTA_MENORES_ARCHIVO: number;
     NUMERADOR_CREATININA: number;
+    DENOMINADOR_CREATININA: number;
     NUMERADOR_HBA1C: number;
     NUMERADOR_MICROALBUMINURIA: number;
     NUMERADOR_INASISTENTE: number;
@@ -109,6 +111,14 @@ function calculateNumeradorCreatinina(input: KpiInput): number {
     return 0;
 }
 
+function calculateDenominadorCreatinina(input: KpiInput): number {
+    const { fechaCreatininaRaw } = input;
+    if (fechaCreatininaRaw != null && String(fechaCreatininaRaw).trim() !== '') {
+        return 1;
+    }
+    return 0;
+}
+
 function calculateNumeradorHba1c(input: KpiInput): number {
     const { dmN, fechaHbOk } = input;
     if (dmN === 'SI' && fechaHbOk) {
@@ -150,6 +160,7 @@ export function computeAllKpisForRow(input: KpiInput): Omit<KpiResults, 'DENOMIN
         NUMERADOR_HTA_MENORES: calculateHtaMenoresNumerador(input),
         DENOMINADOR_HTA_MENORES_ARCHIVO: calculateDenominadorHtaMenoresArchivo(input),
         NUMERADOR_CREATININA: calculateNumeradorCreatinina(input),
+        DENOMINADOR_CREATININA: calculateDenominadorCreatinina(input),
         NUMERADOR_HBA1C: calculateNumeradorHba1c(input),
         NUMERADOR_MICROALBUMINURIA: calculateNumeradorMicroalbuminuria(input),
         NUMERADOR_INASISTENTE: calculateInasistenteAControles(input),

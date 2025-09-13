@@ -178,7 +178,8 @@ const getKpiInputForRow = (row: any[], headerMap: HeaderMap, range6m: any, range
         pas: toNumber(get('pas_last')),
         pad: toNumber(get('pad_last')),
         hba1c: toNumber(get('hba1c')),
-        fPA, fechaOkPA, fechaHbOk, fechaCOk, fechaAlbOk
+        fPA, fechaOkPA, fechaHbOk, fechaCOk, fechaAlbOk,
+        fechaCreatininaRaw: get('fecha_creatinina'),
     };
 };
 
@@ -198,7 +199,7 @@ const computeMetrics = (
         DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
         DENOMINADOR_HTA_MENORES: 0,
         DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
-        NUMERADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
+        NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
     };
     
     const get = (row: any[], key: string) => { const idx = headerMap[key]; return (idx === undefined || idx < 0) ? null : row[idx]; };
@@ -224,7 +225,7 @@ const computeMetrics = (
                     NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
                     DENOMINADOR_HTA_MENORES: 0,
                     DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
-                    NUMERADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
+                    NUMERADOR_CREATININA: 0, DENOMINADOR_CREATINina: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
                 },
                 rowCount: 0
             });
@@ -262,18 +263,12 @@ const computeMetrics = (
         group.results.DENOMINADOR_HTA_MENORES = popData.hta;
         group.results.POBLACION_DM_TOTAL = popData.dm;
         
-        R_accumulator.NUMERADOR_HTA += group.results.NUMERADOR_HTA;
-        R_accumulator.NUMERADOR_HTA_MAYORES += group.results.NUMERADOR_HTA_MAYORES;
-        R_accumulator.DENOMINADOR_HTA_MAYORES += group.results.DENOMINADOR_HTA_MAYORES;
-        R_accumulator.NUMERADOR_DM_CONTROLADOS += group.results.NUMERADOR_DM_CONTROLADOS;
-        R_accumulator.DENOMINADOR_DM_CONTROLADOS += group.results.DENOMINADOR_DM_CONTROLADOS;
-        R_accumulator.NUMERADOR_DM += group.results.NUMERADOR_DM;
-        R_accumulator.NUMERADOR_HTA_MENORES += group.results.NUMERADOR_HTA_MENORES;
-        R_accumulator.DENOMINADOR_HTA_MENORES_ARCHIVO += group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
-        R_accumulator.NUMERADOR_CREATININA += group.results.NUMERADOR_CREATININA;
-        R_accumulator.NUMERADOR_HBA1C += group.results.NUMERADOR_HBA1C;
-        R_accumulator.NUMERADOR_MICROALBUMINURIA += group.results.NUMERADOR_MICROALBUMINURIA;
-        R_accumulator.NUMERADOR_INASISTENTE += group.results.NUMERADOR_INASISTENTE;
+        Object.keys(R_accumulator).forEach(keyStr => {
+             const key = keyStr as keyof KpiResults;
+             if(key !== 'DENOMINADOR_HTA_MENORES' && key !== 'POBLACION_DM_TOTAL') {
+                 R_accumulator[key] += group.results[key] || 0;
+             }
+        });
     }
 
     const groupedData = Array.from(groupedResults.values()).sort((a, b) => {
