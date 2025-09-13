@@ -42,7 +42,7 @@ const EXPECTED: { [key: string]: string[] } = {
     fecha_pa_last: ['FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA', 'FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLÍNICA'],
     fecha_hba1c: ['FECHA DE REPORTE DE HEMOGLOBINA GLICOSILADA'],
     hba1c: ['REPORTE DE HEMOGLOBINA GLICOSILADA (SOLO PARA USUARIOS CON DX DE DM)'],
-    fecha_creatinina: ['FECHA CREATININA SANGRE', 'FECHA CREATININA  SANGRE (mg/dl)'],
+    fecha_creatinina: ['FECHA CREATININA SANGRE', 'FECHA CREATININA  SANGRE'],
     fecha_albuminuria: ['FECHA ALBUMINURIA']
 };
 
@@ -304,5 +304,6 @@ export async function processDataFile(
     onProgress(100, 'Cálculo completado.');
     return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
 }
+
 
 
