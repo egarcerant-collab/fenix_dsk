@@ -127,19 +127,34 @@ export default function ClientPage() {
     const pdfContentElement = document.getElementById('pdf-content');
     if (pdfContentElement) {
         try {
-            const canvas = await html2canvas(pdfContentElement, {
-                scale: 2, // Aumentar la escala para mejor resolución
-                useCORS: true,
-                logging: false,
-            });
+            const canvas = await html2canvas(pdfContentElement, { scale: 2 });
             const imgData = canvas.toDataURL('image/png');
+            
             const pdf = new jsPDF({
                 orientation: 'portrait',
-                unit: 'px',
-                format: [canvas.width, canvas.height]
+                unit: 'mm',
+                format: 'a4'
             });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const canvasAspectRatio = canvasWidth / canvasHeight;
+            
+            let finalImgWidth = pdfWidth;
+            let finalImgHeight = finalImgWidth / canvasAspectRatio;
+
+            if (finalImgHeight > pdfHeight) {
+                finalImgHeight = pdfHeight;
+                finalImgWidth = finalImgHeight * canvasAspectRatio;
+            }
+
+            const xPos = (pdfWidth - finalImgWidth) / 2;
+            const yPos = 0; // Start from top
+
+            pdf.addImage(imgData, 'PNG', xPos, yPos, finalImgWidth, finalImgHeight);
+            
             const pdfBlob = pdf.output('blob');
             const url = URL.createObjectURL(pdfBlob);
 
@@ -787,6 +802,7 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     
 
     
+
 
 
 
