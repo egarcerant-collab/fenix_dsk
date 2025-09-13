@@ -1,4 +1,5 @@
 
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -57,7 +58,7 @@ export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
 
   const idxDpto = findIndex(['DEPARTAMENTO DE RESIDENCIA']);
   const idxMpio = findIndex(['MUNICIPIO DE RESIDENCIA', 'MUNICPIO DE RESIDENCIA']);
-  const idxIps = findIndex(['NOMBRE DE LA IPS QUE HACE SEGUIMIENTO']);
+  const idxIps = findIndex(['NOMBRE DE LA IPS QUE HACE SEGUIMIENTO', 'NOMBRE DE LA  IPS QUE HACE SEGUIMIENTO']);
   const idxHta = findIndex(['POBLACION HTA']);
   const idxDm  = findIndex(['POBLACION DM']);
 
@@ -89,10 +90,11 @@ export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
     const key = `${dpto}|${mpio}|${ips}`;
     const hta = toNumber(values[idxHta]);
     const dm  = toNumber(values[idxDm]);
-
+    
     const prev = map.get(key) || { hta: 0, dm: 0 };
     map.set(key, { hta: prev.hta + hta, dm: prev.dm + dm });
   }
 
   return map;
 }
+

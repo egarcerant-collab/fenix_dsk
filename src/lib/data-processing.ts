@@ -1,5 +1,6 @@
 
 
+
 import { computeAllKpisForRow, KpiInput, KpiResults } from '@/lib/kpi-calculators';
 import { getPopulationMap, PopulationData } from '@/lib/population';
 import * as xlsx from 'xlsx';
@@ -312,7 +313,7 @@ export async function processDataFile(
     const normMissing = missing.map(NORM);
     const missingRequired = normRequired.filter(req => normMissing.includes(req));
 
-    if (missingRequired.length > 0) {
+    if (missingRequired.length > 0 && Array.from(populationMap.keys()).length > 0) {
         throw new Error(`Faltan columnas clave para la agrupación (Departamento, IPS, Municipio). Columnas faltantes: ${missingRequired.join(', ')}`);
     }
 
