@@ -233,17 +233,17 @@ export default function ClientPage() {
 
   const issues = lastResults?.issues || { dates: [], nums: [], cats: [] };
 
-  const chartDataHTA = kpis ? [
-    { name: 'HTA Controlados', Controlados: kpis.NUMERADOR_HTA, Total: kpis.DENOMINADOR_HTA_MENORES },
-  ] : [];
-
-  const chartDataDM = kpis ? [
-    { name: 'DM Control (HbA1c)', Controlados: kpis.NUMERADOR_DM_CONTROLADOS, Total: kpis.DENOMINADOR_DM_CONTROLADOS },
+  const chartData = kpis ? [
+    { name: 'HTA General', Numerador: kpis.NUMERADOR_HTA, Denominador: kpis.DENOMINADOR_HTA_MENORES },
+    { name: 'HTA < 60a', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
+    { name: 'HTA >= 60a', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
+    { name: 'Adherencia DM', Numerador: kpis.NUMERADOR_DM, Denominador: kpis.POBLACION_DM_TOTAL },
+    { name: 'Control DM (HbA1c)', Numerador: kpis.NUMERADOR_DM_CONTROLADOS, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
   ] : [];
 
   const chartConfig = {
-    Controlados: { label: 'Controlados', color: 'hsl(var(--primary))' },
-    Total: { label: 'Total', color: 'hsl(var(--muted))' },
+    Numerador: { label: 'Numerador (Controlados/Cumplen)', color: 'hsl(var(--primary))' },
+    Denominador: { label: 'Denominador (Población Total)', color: 'hsl(var(--muted))' },
   };
 
   const departamentos = lastResults ? [...new Set(lastResults.groupedData.map(item => item.keys.dpto))] : [];
@@ -472,43 +472,35 @@ export default function ClientPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Análisis Visual de KPIs</CardTitle>
-                    <CardDescription>Comparación visual de pacientes controlados vs. el total de la población relevante.</CardDescription>
+                    <CardDescription>Comparación visual de pacientes que cumplen (numerador) vs. la población relevante (denominador) para cada indicador.</CardDescription>
                   </CardHeader>
-                  <CardContent className="grid md:grid-cols-2 gap-8">
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-lg font-semibold text-center">Control de Hipertensión (HTA)</h3>
-                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                            <BarChart accessibilityLayer data={chartDataHTA} margin={{ top: 20 }}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
-                                <YAxis />
-                                <Tooltip
-                                    cursor={{ fill: 'hsl(var(--accent) / 0.2)' }}
-                                    content={<ChartTooltipContent indicator="dot" />}
-                                />
-                                <Legend />
-                                <Bar dataKey="Total" fill="var(--color-Total)" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Controlados" fill="var(--color-Controlados)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ChartContainer>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-lg font-semibold text-center">Control de Diabetes (DM)</h3>
-                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                            <BarChart accessibilityLayer data={chartDataDM} margin={{ top: 20 }}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
-                                <YAxis />
-                                <Tooltip
-                                     cursor={{ fill: 'hsl(var(--accent) / 0.2)' }}
-                                     content={<ChartTooltipContent indicator="dot" />}
-                                />
-                                <Legend />
-                                <Bar dataKey="Total" fill="var(--color-Total)" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Controlados" fill="var(--color-Controlados)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ChartContainer>
-                    </div>
+                  <CardContent>
+                    <ChartContainer config={chartConfig} className="min-h-[400px] w-full">
+                      <BarChart
+                        accessibilityLayer
+                        data={chartData}
+                        layout="vertical"
+                        margin={{ left: 20, right: 20 }}
+                      >
+                        <CartesianGrid horizontal={false} />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          tickLine={false}
+                          tickMargin={10}
+                          axisLine={false}
+                          width={120}
+                        />
+                        <XAxis type="number" />
+                        <Tooltip
+                          cursor={{ fill: 'hsl(var(--accent) / 0.2)' }}
+                          content={<ChartTooltipContent indicator="dot" />}
+                        />
+                        <Legend />
+                        <Bar dataKey="Denominador" fill="var(--color-Denominador)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="Numerador" fill="var(--color-Numerador)" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ChartContainer>
                   </CardContent>
                 </Card>
 
@@ -601,3 +593,5 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
