@@ -42,7 +42,7 @@ const EXPECTED: { [key: string]: string[] } = {
     fecha_pa_last: ['FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA', 'FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLÍNICA'],
     fecha_hba1c: ['FECHA DE REPORTE DE HEMOGLOBINA GLICOSILADA'],
     hba1c: ['REPORTE DE HEMOGLOBINA GLICOSILADA (SOLO PARA USUARIOS CON DX DE DM)'],
-    fecha_creatinina: ['FECHA CREATININA SANGRE', 'FECHA CREATININA  SANGRE'],
+    fecha_creatinina: ['FECHA CREATININA SANGRE', 'FECHA CREATININA  SANGRE', 'FECHA CREATININA SANGRE (MG/DL)'],
     fecha_albuminuria: ['FECHA ALBUMINURIA']
 };
 
@@ -191,13 +191,13 @@ const computeMetrics = (
 ): Omit<DataProcessingResult, 'headers' | 'rawRows' | 'headerMap' | 'R'> & { R: KpiResults & { TOTAL_FILAS: number } } => {
     const issues: DataIssues = { dates: [], nums: [], cats: [] };
 
-    const totalPoblacionDM = Array.from(populationMap.values()).reduce((acc, v) => acc + (v.dm || 0), 0);
-    const totalPoblacionHTA = Array.from(populationMap.values()).reduce((acc, v) => acc + (v.hta || 0), 0);
+    let totalPoblacionDM = 0;
+    let totalPoblacionHTA = 0;
 
     const R_accumulator: KpiResults = {
         NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
-        DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: totalPoblacionDM, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
-        DENOMINADOR_HTA_MENORES: totalPoblacionHTA,
+        DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
+        DENOMINADOR_HTA_MENORES: 0,
         DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
         NUMERADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
     };
@@ -222,9 +222,9 @@ const computeMetrics = (
                 keys: { dpto, municipio, ips },
                 results: { 
                     NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
-                    DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: pop.dm,
+                    DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0,
                     NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
-                    DENOMINADOR_HTA_MENORES: pop.hta,
+                    DENOMINADOR_HTA_MENORES: 0,
                     DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
                     NUMERADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
                 },
@@ -236,6 +236,16 @@ const computeMetrics = (
         
         const kpiInput = getKpiInputForRow(row, headerMap, range6m, range12m);
         const kpiResults = computeAllKpisForRow(kpiInput);
+        
+        if (kpiInput.htaN === 'SI') {
+            group.results.DENOMINADOR_HTA_MENORES++;
+            totalPoblacionHTA++;
+        }
+        if (kpiInput.dmN === 'SI') {
+            group.results.POBLACION_DM_TOTAL++;
+            totalPoblacionDM++;
+        }
+
 
         group.rowCount++;
         
@@ -255,17 +265,8 @@ const computeMetrics = (
         R_accumulator[key] = Array.from(groupedResults.values()).reduce((acc, g) => acc + g.results[key], 0);
     }
     
-    // Fallback logic for groups where population data is missing
-    for (const group of groupedResults.values()) {
-        if (group.results.DENOMINADOR_HTA_MENORES === 0) {
-            group.results.DENOMINADOR_HTA_MENORES = group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
-        }
-    }
-    // Apply fallback for the total accumulator as well
-    if (R_accumulator.DENOMINADOR_HTA_MENORES === 0) {
-        R_accumulator.DENOMINADOR_HTA_MENORES = R_accumulator.DENOMINADOR_HTA_MENORES_ARCHIVO;
-    }
-
+    R_accumulator.POBLACION_DM_TOTAL = totalPoblacionDM;
+    R_accumulator.DENOMINADOR_HTA_MENORES = totalPoblacionHTA;
 
     const groupedData = Array.from(groupedResults.values()).sort((a, b) => {
         if (a.keys.dpto < b.keys.dpto) return -1; if (a.keys.dpto > b.keys.dpto) return 1;
