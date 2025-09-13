@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { FileUp, FileDown, Library, Loader2 } from 'lucide-react';
+import { FileUp, FileDown, Library, Loader2, ChevronsUpDown } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult } from '@/lib/data-processing';
 import { processUploadedFile } from '@/ai/actions';
@@ -413,67 +413,83 @@ export default function ClientPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="w-full overflow-x-auto max-h-[600px] border rounded-md">
-                      <Table className="min-w-max divide-y divide-border">
-                        <TableHeader className="sticky top-0 bg-card z-10">
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableHead className="w-[50px]">#</TableHead>
-                            <TableHead className="min-w-[150px]">DEPARTAMENTO</TableHead>
-                            <TableHead className="min-w-[150px]">MUNICIPIO</TableHead>
-                            <TableHead className="min-w-[200px]">IPS</TableHead>
-                            <TableHead>Num HTA</TableHead>
-                            <TableHead>Pob HTA</TableHead>
-                            <TableHead>Res HTA</TableHead>
-                            <TableHead>Num HTA &lt;60</TableHead>
-                            <TableHead>Den HTA &lt;60</TableHead>
-                            <TableHead>% &lt;60</TableHead>
-                            <TableHead>Num HTA ≥60</TableHead>
-                            <TableHead>Den HTA ≥60</TableHead>
-                            <TableHead>% ≥60</TableHead>
-                            <TableHead>Num DM</TableHead>
-                            <TableHead>Pob DM</TableHead>
-                            <TableHead>Res DM</TableHead>
-                            <TableHead>Num DM Cont.</TableHead>
-                            <TableHead>Den DM Cont.</TableHead>
-                            <TableHead>% DM Cont.</TableHead>
+                            <TableHead>Agrupación</TableHead>
+                            <TableHead>Res. HTA</TableHead>
+                            <TableHead>Res. DM Adh.</TableHead>
+                            <TableHead>Res. DM Cont.</TableHead>
+                            <TableHead className="text-right">Ver Más</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredGroupedData && filteredGroupedData.map((g, index) => {
-                            const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
-                            const poblacionDM = g.results.POBLACION_DM_TOTAL;
-                            const denominadorDM = g.results.DENOMINADOR_DM_CONTROLADOS;
-                            
-                            const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
-                            const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
-                            const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
-                            const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
-                            const resultadoDMCont = denominadorDM > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / denominadorDM : 0;
-                            
-                            return (
-                                <TableRow key={index}>
-                                    <TableCell>{index + 1}</TableCell>
-                                    <TableCell>{g.keys.dpto}</TableCell>
-                                    <TableCell>{g.keys.municipio}</TableCell>
-                                    <TableCell>{g.keys.ips}</TableCell>
-                                    <TableCell>{g.results.NUMERADOR_HTA}</TableCell>
-                                    <TableCell>{poblacionHTA}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoHTA)}</TableCell>
-                                    <TableCell>{g.results.NUMERADOR_HTA_MENORES}</TableCell>
-                                    <TableCell>{g.results.DENOMINADOR_HTA_MENORES_ARCHIVO}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoMenores < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoMenores)}</TableCell>
-                                    <TableCell>{g.results.NUMERADOR_HTA_MAYORES}</TableCell>
-                                    <TableCell>{g.results.DENOMINADOR_HTA_MAYORES}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoMayores < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoMayores)}</TableCell>
-                                    <TableCell>{g.results.NUMERADOR_DM}</TableCell>
-                                    <TableCell>{poblacionDM}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoDMAdh)}</TableCell>
-                                    <TableCell>{g.results.NUMERADOR_DM_CONTROLADOS}</TableCell>
-                                    <TableCell>{denominadorDM}</TableCell>
-                                    <TableCell className={`font-semibold ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>{formatPercent(resultadoDMCont)}</TableCell>
-                                </TableRow>
-                            );
-                          })}
+                          <Accordion type="single" collapsible className="w-full">
+                            {filteredGroupedData && filteredGroupedData.map((g, index) => {
+                              const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
+                              const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
+                              const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
+                              const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
+
+                              const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
+                              const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
+
+                              return (
+                                <AccordionItem value={`item-${index}`} key={index}>
+                                  <TableRow>
+                                    <TableCell>
+                                      <div className="font-medium">{g.keys.ips}</div>
+                                      <div className="text-sm text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
+                                    </TableCell>
+                                    <TableCell className={`font-semibold ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatPercent(resultadoHTA)}
+                                    </TableCell>
+                                    <TableCell className={`font-semibold ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatPercent(resultadoDMAdh)}
+                                    </TableCell>
+                                    <TableCell className={`font-semibold ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatPercent(resultadoDMCont)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                       <AccordionTrigger>
+                                         <Button variant="ghost" size="sm">
+                                            <ChevronsUpDown className="h-4 w-4"/>
+                                         </Button>
+                                       </AccordionTrigger>
+                                    </TableCell>
+                                  </TableRow>
+                                  <AccordionContent asChild>
+                                      <tr>
+                                        <td colSpan={5}>
+                                          <div className="p-4 bg-muted/50 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                              <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
+                                              <KpiDetail label="Pob HTA" value={poblacionHTA} />
+                                              <KpiDetail label="Res HTA" value={formatPercent(resultadoHTA)} />
+
+                                              <KpiDetail label="Num HTA <60" value={g.results.NUMERADOR_HTA_MENORES} />
+                                              <KpiDetail label="Den HTA <60" value={g.results.DENOMINADOR_HTA_MENORES_ARCHIVO} />
+                                              <KpiDetail label="% <60" value={formatPercent(resultadoMenores)} />
+                                              
+                                              <KpiDetail label="Num HTA ≥60" value={g.results.NUMERADOR_HTA_MAYORES} />
+                                              <KpiDetail label="Den HTA ≥60" value={g.results.DENOMINADOR_HTA_MAYORES} />
+                                              <KpiDetail label="% ≥60" value={formatPercent(resultadoMayores)} />
+
+                                              <KpiDetail label="Num DM Adh." value={g.results.NUMERADOR_DM} />
+                                              <KpiDetail label="Pob DM Adh." value={g.results.POBLACION_DM_TOTAL} />
+                                              <KpiDetail label="% DM Adh." value={formatPercent(resultadoDMAdh)} />
+                                            
+                                              <KpiDetail label="Num DM Cont." value={g.results.NUMERADOR_DM_CONTROLADOS} />
+                                              <KpiDetail label="Den DM Cont." value={g.results.DENOMINADOR_DM_CONTROLADOS} />
+                                              <KpiDetail label="% DM Cont." value={formatPercent(resultadoDMCont)} />
+                                          </div>
+                                        </td>
+                                      </tr>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              );
+                            })}
+                          </Accordion>
                         </TableBody>
                       </Table>
                     </div>
@@ -621,4 +637,9 @@ export default function ClientPage() {
   );
 }
 
-    
+const KpiDetail = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="flex flex-col items-center justify-center p-2 border rounded-md bg-background text-center">
+        <div className="text-lg font-bold text-primary">{value}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+);
