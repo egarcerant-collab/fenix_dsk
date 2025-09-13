@@ -37,7 +37,7 @@ const EXPECTED: { [key: string]: string[] } = {
     edad: ['EDAD'],
     dx_hta: ['DX CONFIRMADO HTA'],
     dx_dm: ['DX CONFIRMADO DM'],
-    pas_last: ['ULTIMA TENSION ARTERIAL SISTOLICA', 'ÚLTIMA TENSIÓN ARTERIAL SISTOLICA'],
+    pas_last: ['ULTIMA TENSION ARTERIAL SISTOLICA', 'ÚLTIMA TENSIÓN ARTERIAL SISTÓLICA'],
     pad_last: ['ULTIMA TENSION ARTERIAL DIASTOLICA', 'ÚLTIMA TENSIÓN ARTERIAL DIASTÓLICA'],
     fecha_pa_last: ['FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA', 'FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLÍNICA'],
     fecha_hba1c: ['FECHA DE REPORTE DE HEMOGLOBINA GLICOSILADA'],
@@ -192,11 +192,12 @@ const computeMetrics = (
     const issues: DataIssues = { dates: [], nums: [], cats: [] };
 
     const totalPoblacionDM = Array.from(populationMap.values()).reduce((acc, v) => acc + (v.dm || 0), 0);
+    const totalPoblacionHTA = Array.from(populationMap.values()).reduce((acc, v) => acc + (v.hta || 0), 0);
 
     const R_accumulator: KpiResults = {
         NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
         DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: totalPoblacionDM, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
-        DENOMINADOR_HTA_MENORES: 0,
+        DENOMINADOR_HTA_MENORES: totalPoblacionHTA,
         DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
         NUMERADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
     };
@@ -229,7 +230,6 @@ const computeMetrics = (
                 },
                 rowCount: 0
             });
-             R_accumulator.DENOMINADOR_HTA_MENORES += pop.hta;
         }
 
         const group = groupedResults.get(groupKey)!;
@@ -248,11 +248,22 @@ const computeMetrics = (
         if (i0 % batch === 0 || i0 === rawRows.length - 1) onProgress(((i0 + 1) / total) * 90 + 10, `Procesando fila ${i0 + 1} de ${total}…`);
     }
     
-    // Sum up everything for the main accumulator from the final groups
+    // Sum up everything for the main accumulator and apply fallbacks
     const calculableKeys = Object.keys(computeAllKpisForRow({} as any)) as (keyof Omit<KpiResults, 'POBLACION_DM_TOTAL' | 'DENOMINADOR_HTA_MENORES'>)[];
 
     for (const key of calculableKeys) {
         R_accumulator[key] = Array.from(groupedResults.values()).reduce((acc, g) => acc + g.results[key], 0);
+    }
+    
+    // Fallback logic for groups where population data is missing
+    for (const group of groupedResults.values()) {
+        if (group.results.DENOMINADOR_HTA_MENORES === 0) {
+            group.results.DENOMINADOR_HTA_MENORES = group.results.DENOMINADOR_HTA_MENORES_ARCHIVO;
+        }
+    }
+    // Apply fallback for the total accumulator as well
+    if (R_accumulator.DENOMINADOR_HTA_MENORES === 0) {
+        R_accumulator.DENOMINADOR_HTA_MENORES = R_accumulator.DENOMINADOR_HTA_MENORES_ARCHIVO;
     }
 
 
@@ -304,6 +315,4 @@ export async function processDataFile(
     onProgress(100, 'Cálculo completado.');
     return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
 }
-
-
 
