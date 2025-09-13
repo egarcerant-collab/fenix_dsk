@@ -789,3 +789,4 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
     
 
 
+
