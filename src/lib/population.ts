@@ -28,10 +28,8 @@ function toNumber(val: any): number {
 // Intenta: public/POBLACION_2.csv -> ./POBLACION_2.csv -> fetch('/POBLACION_2.csv')
 async function loadPopulationCsv(): Promise<string> {
   const candidates = [
-    path.join(process.cwd(), 'public', 'POBLACION_2.csv'),
-    path.join(process.cwd(), 'public', 'POBLACION 2.csv'),
-    path.join(process.cwd(), 'POBLACION_2.csv'),
-    path.join(process.cwd(), 'POBLACION 2.csv'),
+    path.join(process.cwd(), 'public', 'Poblacion 2025.csv'),
+    path.join(process.cwd(), 'Poblacion 2025.csv'),
   ];
 
   for (const p of candidates) {
@@ -46,14 +44,14 @@ async function loadPopulationCsv(): Promise<string> {
 
   // Fallback para entorno cliente/hosting estático
   try {
-    const urlCandidates = ['/POBLACION_2.csv', '/POBLACION%202.csv'];
+    const urlCandidates = ['/Poblacion%202025.csv'];
     for (const u of urlCandidates) {
       const res = await fetch(u);
       if (res.ok) return await res.text();
     }
   } catch { /* ignore */ }
 
-  throw new Error('No se encontró el archivo de población (POBLACION_2.csv) en public/ ni accesible por fetch().');
+  throw new Error('No se encontró el archivo de población (Poblacion 2025.csv) en public/ ni accesible por fetch().');
 }
 
 export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
