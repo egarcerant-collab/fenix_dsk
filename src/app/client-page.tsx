@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { FileUp, FileDown, Library, Loader2, ChevronsUpDown } from 'lucide-react';
+import { FileUp, FileDown, Library, Loader2, ChevronDown } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult } from '@/lib/data-processing';
 import { processUploadedFile } from '@/ai/actions';
@@ -413,97 +413,94 @@ export default function ClientPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                     <Accordion type="single" collapsible className="w-full border rounded-md">
-                        <TableHeader className="bg-muted/50">
-                          <TableRow className="hover:bg-muted/50">
-                            <TableHead className="w-2/5">Agrupación</TableHead>
-                            <TableHead>Res. HTA</TableHead>
-                            <TableHead>Res. DM Adh.</TableHead>
-                            <TableHead>Res. DM Cont.</TableHead>
-                            <TableHead className="text-right w-[100px]"><span className="sr-only">Ver Más</span></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredGroupedData && filteredGroupedData.map((g, index) => {
-                            const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
-                            const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
-                            const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
-                            const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
-                            const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
-                            const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
+                     <Accordion type="single" collapsible className="w-full space-y-2">
+                      {filteredGroupedData && filteredGroupedData.map((g, index) => {
+                        const poblacionHTA = g.results.DENOMINADOR_HTA_MENORES;
+                        const resultadoHTA = poblacionHTA > 0 ? g.results.NUMERADOR_HTA / poblacionHTA : 0;
+                        const resultadoDMAdh = g.results.POBLACION_DM_TOTAL > 0 ? g.results.NUMERADOR_DM / g.results.POBLACION_DM_TOTAL : 0;
+                        const resultadoDMCont = g.results.DENOMINADOR_DM_CONTROLADOS > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / g.results.DENOMINADOR_DM_CONTROLADOS : 0;
+                        const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
+                        const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
 
-                            return (
-                              <AccordionItem value={`item-${index}`} key={index}>
-                                <AccordionTrigger className="w-full px-0">
-                                   <TableRow className="w-full hover:bg-transparent border-none">
-                                      <TableCell>
-                                        <div className="font-medium">{g.keys.ips}</div>
-                                        <div className="text-sm text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
-                                      </TableCell>
-                                      <TableCell className={`font-semibold ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-                                        {formatPercent(resultadoHTA)}
-                                      </TableCell>
-                                      <TableCell className={`font-semibold ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-                                        {formatPercent(resultadoDMAdh)}
-                                      </TableCell>
-                                      <TableCell className={`font-semibold ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
-                                        {formatPercent(resultadoDMCont)}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                          {/* Icon will be rendered by AccordionTrigger */}
-                                      </TableCell>
-                                   </TableRow>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                    <div className="p-4 bg-muted/50 border-t">
-                                      <Accordion type="multiple" className="space-y-2">
-                                        <AccordionItem value="hta-general">
-                                            <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">HTA General</AccordionTrigger>
-                                            <AccordionContent className="pt-2">
-                                                <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                    <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
-                                                    <KpiDetail label="Pob HTA" value={poblacionHTA} />
-                                                    <KpiDetail label="Res HTA" value={formatPercent(resultadoHTA)} />
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                        <AccordionItem value="hta-edad">
-                                            <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">HTA por Edad</AccordionTrigger>
-                                            <AccordionContent className="pt-2 space-y-2">
-                                                 <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                    <KpiDetail label="Num HTA <60" value={g.results.NUMERADOR_HTA_MENORES} />
-                                                    <KpiDetail label="Den HTA <60 (Arch.)" value={g.results.DENOMINADOR_HTA_MENORES_ARCHIVO} />
-                                                    <KpiDetail label="% <60" value={formatPercent(resultadoMenores)} />
-                                                  </div>
-                                                  <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                    <KpiDetail label="Num HTA ≥60" value={g.results.NUMERADOR_HTA_MAYORES} />
-                                                    <KpiDetail label="Den HTA ≥60 (Arch.)" value={g.results.DENOMINADOR_HTA_MAYORES} />
-                                                    <KpiDetail label="% ≥60" value={formatPercent(resultadoMayores)} />
-                                                  </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                        <AccordionItem value="dm">
-                                            <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">Resultados DM</AccordionTrigger>
-                                            <AccordionContent className="pt-2 space-y-2">
-                                                  <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                    <KpiDetail label="Num DM Adh." value={g.results.NUMERADOR_DM} />
-                                                    <KpiDetail label="Pob DM Adh. (Pob.)" value={g.results.POBLACION_DM_TOTAL} />
-                                                    <KpiDetail label="% DM Adh." value={formatPercent(resultadoDMAdh)} />
-                                                  </div>
-                                                  <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
-                                                    <KpiDetail label="Num DM Cont." value={g.results.NUMERADOR_DM_CONTROLADOS} />
-                                                    <KpiDetail label="Den DM Cont. (Arch.)" value={g.results.DENOMINADOR_DM_CONTROLADOS} />
-                                                    <KpiDetail label="% DM Cont." value={formatPercent(resultadoDMCont)} />
-                                                  </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                      </Accordion>
+                        return (
+                          <AccordionItem value={`item-${index}`} key={index} className="border rounded-md px-4">
+                            <AccordionTrigger className="py-4 w-full [&>svg]:ml-auto">
+                              <div className="flex flex-col md:flex-row md:items-center md:gap-4 w-full text-left">
+                                <div className="flex-1 mb-2 md:mb-0">
+                                  <div className="font-medium">{g.keys.ips}</div>
+                                  <div className="text-sm text-muted-foreground">{g.keys.municipio}, {g.keys.dpto}</div>
+                                </div>
+                                <div className="flex gap-4 text-sm">
+                                  <div className="text-center">
+                                    <div className="font-semibold text-muted-foreground text-xs">Res. HTA</div>
+                                    <div className={`font-bold text-lg ${resultadoHTA < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatPercent(resultadoHTA)}
                                     </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            );
-                          })}
-                        </TableBody>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-semibold text-muted-foreground text-xs">Res. DM Adh.</div>
+                                    <div className={`font-bold text-lg ${resultadoDMAdh < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatPercent(resultadoDMAdh)}
+                                    </div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-semibold text-muted-foreground text-xs">Res. DM Cont.</div>
+                                    <div className={`font-bold text-lg ${resultadoDMCont < 0.7 ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatPercent(resultadoDMCont)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="p-4 bg-muted/50 border-t -mx-4 -mb-4">
+                                  <Accordion type="multiple" className="space-y-2">
+                                    <AccordionItem value="hta-general">
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">HTA General</AccordionTrigger>
+                                        <AccordionContent className="pt-2">
+                                            <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num HTA" value={g.results.NUMERADOR_HTA} />
+                                                <KpiDetail label="Pob HTA" value={poblacionHTA} />
+                                                <KpiDetail label="Res HTA" value={formatPercent(resultadoHTA)} />
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    <AccordionItem value="hta-edad">
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">HTA por Edad</AccordionTrigger>
+                                        <AccordionContent className="pt-2 space-y-2">
+                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num HTA <60" value={g.results.NUMERADOR_HTA_MENORES} />
+                                                <KpiDetail label="Den HTA <60 (Arch.)" value={g.results.DENOMINADOR_HTA_MENORES_ARCHIVO} />
+                                                <KpiDetail label="% <60" value={formatPercent(resultadoMenores)} />
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num HTA ≥60" value={g.results.NUMERADOR_HTA_MAYORES} />
+                                                <KpiDetail label="Den HTA ≥60 (Arch.)" value={g.results.DENOMINADOR_HTA_MAYORES} />
+                                                <KpiDetail label="% ≥60" value={formatPercent(resultadoMayores)} />
+                                              </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    <AccordionItem value="dm">
+                                        <AccordionTrigger className="bg-background rounded-md px-4 py-2 text-sm font-semibold">Resultados DM</AccordionTrigger>
+                                        <AccordionContent className="pt-2 space-y-2">
+                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num DM Adh." value={g.results.NUMERADOR_DM} />
+                                                <KpiDetail label="Pob DM Adh. (Pob.)" value={g.results.POBLACION_DM_TOTAL} />
+                                                <KpiDetail label="% DM Adh." value={formatPercent(resultadoDMAdh)} />
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-2 p-2 border rounded-md">
+                                                <KpiDetail label="Num DM Cont." value={g.results.NUMERADOR_DM_CONTROLADOS} />
+                                                <KpiDetail label="Den DM Cont. (Arch.)" value={g.results.DENOMINADOR_DM_CONTROLADOS} />
+                                                <KpiDetail label="% DM Cont." value={formatPercent(resultadoDMCont)} />
+                                              </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
                      </Accordion>
                   </CardContent>
                 </Card>
@@ -655,5 +652,7 @@ const KpiDetail = ({ label, value }: { label: string; value: string | number }) 
         <div className="text-xs text-muted-foreground mt-1">{label}</div>
     </div>
 );
+
+    
 
     
