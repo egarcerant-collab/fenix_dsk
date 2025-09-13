@@ -44,7 +44,7 @@ async function loadPopulationCsv(): Promise<string> {
 
   // Fallback para entorno cliente/hosting estático
   try {
-    const urlCandidates = ['/Poblacion%202025.csv'];
+    const urlCandidates = ['/Poblacion%202025.csv', '/Poblacion 2025.csv'];
     for (const u of urlCandidates) {
       const res = await fetch(u);
       if (res.ok) return await res.text();
@@ -68,7 +68,7 @@ export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
   }
 
   // Parsear con xlsx para robustez (respeta comillas/escapes)
-  const wb = xlsx.read(text.replace(/\r\n/g, '\n'), { type: 'string', FS: sep });
+  const wb = xlsx.read(text.replace(/\r\n/g, '\n'), { type: 'string', FS: sep, raw: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const arr: any[][] = xlsx.utils.sheet_to_json(ws, { header: 1, defval: null }) as any;
 
@@ -83,19 +83,21 @@ export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
 
   // Mapear índices de columnas (tolerando variantes)
   const HN = headers.map(h => NORM(h));
-  const idxDpto = HN.indexOf(NORM('DEPARTAMENTO DE RESIDENCIA'));
-  const idxMpio = (() => {
-    const v1 = HN.indexOf(NORM('MUNICPIO DE RESIDENCIA'));      // sin I
-    const v2 = HN.indexOf(NORM('MUNICIPIO DE RESIDENCIA'));
-    return v1 !== -1 ? v1 : v2;
-  })();
-  const idxIps = HN.indexOf(NORM('NOMBRE DE LA  IPS QUE HACE SEGUIMIENTO')) !== -1
-    ? HN.indexOf(NORM('NOMBRE DE LA  IPS QUE HACE SEGUIMIENTO'))
-    : HN.indexOf(NORM('NOMBRE DE LA IPS QUE HACE SEGUIMIENTO'));
-  const idxHta = HN.indexOf(NORM('POBLACION HTA'));
-  const idxDm  = HN.indexOf(NORM('POBLACION DM'));
+  
+  const findIndex = (variants: string[]) => {
+      for(const variant of variants) {
+          const idx = HN.indexOf(NORM(variant));
+          if(idx !== -1) return idx;
+      }
+      return -1;
+  }
 
-  const required = { idxDpto, idxMpio, idxIps, idxHta, idxDm };
+  const idxDpto = findIndex(['DEPARTAMENTO DE RESIDENCIA']);
+  const idxMpio = findIndex(['MUNICPIO DE RESIDENCIA', 'MUNICIPIO DE RESIDENCIA']);
+  const idxIps = findIndex(['NOMBRE DE LA  IPS QUE HACE SEGUIMIENTO', 'NOMBRE DE LA IPS QUE HACE SEGUIMIENTO']);
+  const idxHta = findIndex(['POBLACION HTA']);
+  const idxDm  = findIndex(['POBLACION DM']);
+
   const missingCols = [];
   if (idxDpto === -1) missingCols.push('DEPARTAMENTO DE RESIDENCIA');
   if (idxMpio === -1) missingCols.push('MUNICIPIO DE RESIDENCIA');
@@ -104,13 +106,15 @@ export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
   if (idxDm === -1) missingCols.push('POBLACION DM');
   
   if (missingCols.length > 0) {
-      throw new Error(`Archivo de población: Faltan las siguientes columnas requeridas: ${missingCols.join(', ')}.`);
+      throw new Error(`Archivo de población '${wb.SheetNames[0]}': Faltan las siguientes columnas requeridas: ${missingCols.join(', ')}.`);
   }
 
 
   const map = new Map<string, PopulationData>();
 
   for (const r of rows) {
+      if(!r || r.length === 0 || r.every(cell => cell === null)) continue;
+      
     const dpto = NORM(r[idxDpto]);
     const mpio = NORM(r[idxMpio]);
     const ips  = NORM(r[idxIps]);
