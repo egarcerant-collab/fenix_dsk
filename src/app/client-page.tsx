@@ -126,7 +126,8 @@ export default function ClientPage() {
 
     const parseAIContent = (content: string): any[] => {
         if (!content) return [];
-        const cleanContent = content.replace(/<\/?p>|<\/?ul>|<\/?li>|<\/?ol>|<\/?strong>/g, '\n').trim();
+        // Expanded regex to remove more HTML tags like <b>
+        const cleanContent = content.replace(/<\/?(p|ul|li|ol|strong|b)>/g, '\n').trim();
         const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
         return items;
     };
@@ -595,7 +596,7 @@ export default function ClientPage() {
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
                                         <div>
                                            <p className="text-2xl font-bold text-primary">{isPercentage ? value : (kpis as any)[key] ?? 0}</p>
-                                           <p className="font-semibold mt-1" dangerouslySetInnerHTML={{ __html: label.replace(/<|>/g, (char) => (char === '<' ? '&lt;' : '&gt;')) }}></p>
+                                           <p className="font-semibold mt-1" dangerouslySetInnerHTML={{ __html: label }}></p>
                                         </div>
                                         <p className="text-muted-foreground mt-2">{description}</p>
                                     </Card>
@@ -712,5 +713,7 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
 
     
