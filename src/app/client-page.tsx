@@ -126,7 +126,7 @@ export default function ClientPage() {
 
     const parseAIContent = (content: string): any[] => {
         if (!content) return [];
-        const cleanContent = content.replace(/<\/?p>|<\/?ul>|<\/?li>|<\/?strong>|<\/?ol>/g, '\n').trim();
+        const cleanContent = content.replace(/<\/?p>|<\/?ul>|<\/?li>|<\/?ol>|<\/?strong>/g, '\n').trim();
         const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
         return items;
     };
@@ -205,13 +205,9 @@ export default function ClientPage() {
         
         const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio);
         
-        const [headerImg, footerImg, backgroundImg] = await Promise.all([
-          loadImageAsBase64('/imagenes pdf/IMAGENES PARA PDF.jpg'),
-          loadImageAsBase64('/imagenes pdf/PIE DE PAGINA.jpg'),
-          loadImageAsBase64('/imagenes pdf/DERECHA.jpg')
-        ]);
+        const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
         
-        await descargarInformePDF(datosInforme, { header: headerImg, footer: footerImg, background: backgroundImg });
+        await descargarInformePDF(datosInforme, { background: backgroundImg });
 
     } catch (error) {
         console.error("Error generando el PDF:", error);
@@ -246,13 +242,9 @@ export default function ClientPage() {
     pdfMake.vfs = pdfFonts;
     
     try {
-        const [headerImg, footerImg, backgroundImg] = await Promise.all([
-          loadImageAsBase64('/imagenes pdf/IMAGENES PARA PDF.jpg'),
-          loadImageAsBase64('/imagenes pdf/PIE DE PAGINA.jpg'),
-          loadImageAsBase64('/imagenes pdf/DERECHA.jpg')
-        ]);
+        const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       
-        const images = { header: headerImg, footer: footerImg, background: backgroundImg };
+        const images = { background: backgroundImg };
       
         const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
 
@@ -422,7 +414,7 @@ export default function ClientPage() {
       title: 'Resultado Control DM (HbA1c)',
       cards: [
         { label: 'DM Controlado (Numerador)', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c < 7%.' },
-        { label: 'Pacientes con DM (Denominador)', key: 'DENOMINador_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
+        { label: 'Pacientes con DM (Denominador)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
         { label: 'Resultado Control DM', key: 'RESULTADO_DM_CONTROL', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_DM_CONTROLADOS / kpis.DENOMINADOR_DM_CONTROLADOS : 0), description: '(Numerador / Denominador)' },
       ]
     },
@@ -684,8 +676,8 @@ export default function ClientPage() {
                         <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf}>
+                         <div className="grid sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+                            <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf} className="mb-2 sm:mb-0 w-full sm:w-auto">
                                 <FileDown className="mr-2 h-4 w-4"/>
                                 Exportar Excel
                             </Button>
@@ -700,14 +692,16 @@ export default function ClientPage() {
                                 ))}
                                 </SelectContent>
                             </Select>
-                            <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf}>
-                                {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
-                                {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
-                            </Button>
-                             <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf}>
-                                {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
-                                {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
-                            </Button>
+                            <div className="flex gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                                <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf} className="w-full">
+                                    {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
+                                    {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
+                                </Button>
+                                 <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
+                                    {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
+                                    {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

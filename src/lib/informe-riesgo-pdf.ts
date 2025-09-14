@@ -24,8 +24,6 @@ export interface InformeDatos {
 }
 
 export interface PdfImages {
-  header: string;
-  footer: string;
   background: string;
 }
 
@@ -128,7 +126,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
 
   const docDefinition: any = {
     pageSize: "A4",
-    pageMargins: [115, 115, 115, 115], // 4cm en cada lado (1cm = 28.35pt)
+    pageMargins: [60, 60, 60, 60], 
     info: {
       title: "Evaluación de Indicadores – Gestión del Riesgo",
       author: "Dirección del Riesgo en Salud",
@@ -143,13 +141,6 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
       small: { fontSize: 10 },
       tableHeader: { bold: true, fontSize: 12 },
     },
-    header: images?.header ? { image: images.header, width: 120, alignment: 'right', margin: [0, 40, 60, 0] } : {},
-    footer: images?.footer ? {
-        image: images.footer,
-        width: 595, // A4 width
-        alignment: 'center',
-        margin: [0, 20, 0, 0]
-    } : {},
     background: function(currentPage: number, pageSize: any) {
         if (!images?.background) return null;
         return {
@@ -157,7 +148,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
             width: pageSize.width,
             height: pageSize.height,
             absolutePosition: { x: 0, y: 0 },
-            opacity: 0.8
+            opacity: 1
         };
     },
     content: mainContent
