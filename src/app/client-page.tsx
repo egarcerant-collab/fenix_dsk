@@ -19,7 +19,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
 import JSZip from 'jszip';
-import { descargarInformePDF, buildDocDefinition, InformeDatos } from '@/lib/informe-riesgo-pdf';
+import { descargarInformePDF, buildDocDefinition, InformeDatos, PdfImages } from '@/lib/informe-riesgo-pdf';
 import { loadImageAsBase64 } from '@/lib/image-loader';
 
 
@@ -208,7 +208,9 @@ export default function ClientPage() {
         
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
         
-        await descargarInformePDF(datosInforme, { background: backgroundImg });
+        const images: PdfImages = { background: backgroundImg };
+        
+        await descargarInformePDF(datosInforme, images);
 
     } catch (error) {
         console.error("Error generando el PDF:", error);
@@ -245,7 +247,7 @@ export default function ClientPage() {
     try {
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       
-        const images = { background: backgroundImg };
+        const images: PdfImages = { background: backgroundImg };
       
         const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
 
@@ -498,12 +500,14 @@ export default function ClientPage() {
 
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
-          <div className="container mx-auto flex items-center justify-between">
-            <h1 className="font-bold text-primary">Excel Data Insights</h1>
-            <Badge variant={xlsxLoaded ? "secondary" : "destructive"}>
-              <Library className="mr-2 h-4 w-4"/>
-              XLSX: {xlsxLoaded ? 'Cargado' : 'No Cargado'}
-            </Badge>
+          <div className="container mx-auto flex items-center justify-center relative">
+            <h1 className="font-bold text-primary text-2xl">indicadores fenix</h1>
+            <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                <Badge variant={xlsxLoaded ? "secondary" : "destructive"}>
+                  <Library className="mr-2 h-4 w-4"/>
+                  XLSX: {xlsxLoaded ? 'Cargado' : 'No Cargado'}
+                </Badge>
+            </div>
           </div>
         </header>
 
