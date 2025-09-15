@@ -501,7 +501,7 @@ export default function ClientPage() {
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
           <div className="container mx-auto flex items-center justify-center relative">
-            <h1 className="font-bold text-primary text-2xl">indicadores fenix</h1>
+            <h1 className="font-bold text-primary text-2xl uppercase">indicadores fenix</h1>
             <div className="absolute right-6 top-1/2 -translate-y-1/2">
                 <Badge variant={xlsxLoaded ? "secondary" : "destructive"}>
                   <Library className="mr-2 h-4 w-4"/>
