@@ -1,7 +1,7 @@
 
 
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from '@/components/ui/badge';
 import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
 import Script from 'next/script';
-import { DataProcessingResult, GroupedResult } from '@/lib/data-processing';
+import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
 import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
@@ -50,6 +50,8 @@ export default function ClientPage() {
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -75,6 +77,7 @@ export default function ClientPage() {
 
     action.then(results => {
       setLastResults(results);
+      setSelectedDepartment('all');
       setStatus('Completado.');
       setProgress(100);
       toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
@@ -377,8 +380,45 @@ export default function ClientPage() {
     if (!value || !Number.isFinite(value)) return 'N/A';
     return `${(value * 100).toFixed(1)}%`;
   }
+
+  const { departments, filteredGroupedData } = useMemo(() => {
+    if (!lastResults) return { departments: [], filteredGroupedData: [] };
+    const departments = [...new Set(lastResults.groupedData.map(g => g.keys.dpto))].sort();
+    
+    const filtered = selectedDepartment === 'all' 
+      ? lastResults.groupedData
+      : lastResults.groupedData.filter(g => g.keys.dpto === selectedDepartment);
+      
+    return { departments, filteredGroupedData: filtered };
+  }, [lastResults, selectedDepartment]);
+
+
+  const kpis = useMemo(() => {
+    if (!lastResults) return null;
+    
+    if (selectedDepartment === 'all') {
+        return lastResults.R;
+    }
+
+    const initialKpis: KpiResults & { TOTAL_FILAS: number } = {
+        NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
+        DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
+        DENOMINADOR_HTA_MENORES: 0, DENOMINADOR_HTA_MENORES_ARCHIVO: 0, NUMERADOR_CREATININA: 0,
+        DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
+        TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0, TOTAL_FILAS: 0,
+    };
+
+    return filteredGroupedData.reduce((acc, group) => {
+        Object.keys(group.results).forEach(keyStr => {
+            const key = keyStr as keyof KpiResults;
+            (acc as any)[key] += group.results[key] || 0;
+        });
+        acc.TOTAL_FILAS += group.rowCount;
+        return acc;
+    }, initialKpis as any);
+
+  }, [lastResults, filteredGroupedData, selectedDepartment]);
   
-  const kpis = lastResults?.R;
 
   const kpiGroups = kpis ? [
     {
@@ -491,14 +531,16 @@ export default function ClientPage() {
     Denominador: { label: 'Denominador (Población)', color: 'hsl(var(--muted))' },
   };
   
-  const uniqueIpsLocations = lastResults 
-    ? [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()]
+  const uniqueIpsLocations = useMemo(() => {
+    if (!lastResults) return [];
+    return [...new Map(filteredGroupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()]
         .map(item => ({
             value: `${item.keys.ips}|${item.keys.municipio}`,
             label: `${item.keys.ips} - ${item.keys.municipio}`
         }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-    : [];
+        .sort((a, b) => a.label.localeCompare(b.label));
+  }, [lastResults, filteredGroupedData]);
+
 
   return (
     <>
@@ -597,9 +639,24 @@ export default function ClientPage() {
           {lastResults && kpis && (
              <div className="grid gap-8">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Resultados de Indicadores (Totales)</CardTitle>
-                        <CardDescription>Resumen de los KPIs calculados para todo el archivo.</CardDescription>
+                    <CardHeader className="flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : selectedDepartment})</CardTitle>
+                            <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
+                        </div>
+                        <div className="w-[200px]">
+                             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar Depto." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Departamentos</SelectItem>
+                                    {departments.map(dpto => (
+                                        <SelectItem key={dpto} value={dpto}>{dpto}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-8">
                         {kpiGroups.map((group, index) => (
@@ -715,7 +772,7 @@ export default function ClientPage() {
                                 <SelectValue placeholder="Seleccionar IPS para PDF" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                <SelectItem value="all">Consolidado Todas las IPS</SelectItem>
+                                <SelectItem value="all">Consolidado ({selectedDepartment === 'all' ? 'Todos' : selectedDepartment})</SelectItem>
                                 {uniqueIpsLocations.map(item => (
                                     <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
                                 ))}
@@ -745,3 +802,4 @@ export default function ClientPage() {
     
 
     
+
