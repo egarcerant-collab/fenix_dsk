@@ -45,7 +45,8 @@ const EXPECTED: { [key: string]: string[] } = {
     fecha_hba1c: ['FECHA DE REPORTE DE HEMOGLOBINA GLICOSILADA'],
     hba1c: ['REPORTE DE HEMOGLOBINA GLICOSILADA (SOLO PARA USUARIOS CON DX DE DM)'],
     fecha_creatinina: ['FECHA CREATININA SANGRE', 'FECHA CREATININA  SANGRE', 'FECHA CREATININA SANGRE (MG/DL)'],
-    fecha_albuminuria: ['FECHA ALBUMINURIA']
+    fecha_albuminuria: ['FECHA ALBUMINURIA'],
+    estadio_tfg: ['ESTADIO  SEGÚN TFG', 'ESTADIO SEGÚN TFG'],
 };
 
 
@@ -180,6 +181,7 @@ const getKpiInputForRow = (row: any[], headerMap: HeaderMap, range6m: any, range
         hba1c: toNumber(get('hba1c')),
         fPA, fechaOkPA, fechaHbOk, fechaCOk, fechaAlbOk,
         fechaCreatininaRaw: get('fecha_creatinina'),
+        estadioTfg: NORM(get('estadio_tfg')),
     };
 };
 
@@ -200,6 +202,7 @@ const computeMetrics = (
         DENOMINADOR_HTA_MENORES: 0,
         DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
         NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
+        TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0,
     };
     
     const get = (row: any[], key: string) => { const idx = headerMap[key]; return (idx === undefined || idx < 0) ? null : row[idx]; };
@@ -225,7 +228,8 @@ const computeMetrics = (
                     NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
                     DENOMINADOR_HTA_MENORES: 0,
                     DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
-                    NUMERADOR_CREATININA: 0, DENOMINADOR_CREATINina: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
+                    NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
+                    TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0,
                 },
                 rowCount: 0
             });
@@ -240,7 +244,7 @@ const computeMetrics = (
         
         Object.keys(kpiResults).forEach(keyStr => {
             const key = keyStr as keyof KpiResults;
-            group.results[key] = (group.results[key] || 0) + kpiResults[key];
+            (group.results as any)[key] = ((group.results as any)[key] || 0) + (kpiResults as any)[key];
         });
         
         if (i0 % batch === 0 || i0 === rawRows.length - 1) onProgress(((i0 + 1) / total) * 90 + 10, `Procesando fila ${i0 + 1} de ${total}…`);
@@ -266,7 +270,7 @@ const computeMetrics = (
         Object.keys(R_accumulator).forEach(keyStr => {
              const key = keyStr as keyof KpiResults;
              if(key !== 'DENOMINADOR_HTA_MENORES' && key !== 'POBLACION_DM_TOTAL') {
-                 R_accumulator[key] += group.results[key] || 0;
+                 (R_accumulator as any)[key] += (group.results as any)[key] || 0;
              }
         });
     }

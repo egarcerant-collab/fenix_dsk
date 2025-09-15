@@ -12,6 +12,7 @@ export interface KpiInput {
     fechaCOk: boolean;
     fechaAlbOk: boolean;
     fechaCreatininaRaw: any;
+    estadioTfg: string;
 }
 
 export interface KpiResults {
@@ -30,6 +31,12 @@ export interface KpiResults {
     NUMERADOR_HBA1C: number;
     NUMERADOR_MICROALBUMINURIA: number;
     NUMERADOR_INASISTENTE: number;
+    TFG_E1: number;
+    TFG_E2: number;
+    TFG_E3: number;
+    TFG_E4: number;
+    TFG_E5: number;
+    TFG_TOTAL: number;
 }
 
 // --- Individual KPI Calculator Functions ---
@@ -140,12 +147,29 @@ function calculateInasistenteAControles(input: KpiInput): number {
     return 0;
 }
 
+function calculateTfgEstadios(input: KpiInput): { tfg1: number, tfg2: number, tfg3: number, tfg4: number, tfg5: number, tfgTotal: number } {
+    const { estadioTfg } = input;
+    let tfg1 = 0, tfg2 = 0, tfg3 = 0, tfg4 = 0, tfg5 = 0;
+    
+    switch (estadioTfg) {
+        case 'ESTADIO 1': tfg1 = 1; break;
+        case 'ESTADIO 2': tfg2 = 1; break;
+        case 'ESTADIO 3': tfg3 = 1; break;
+        case 'ESTADIO 4': tfg4 = 1; break;
+        case 'ESTADIO 5': tfg5 = 1; break;
+    }
+    
+    const tfgTotal = (tfg1 || tfg2 || tfg3 || tfg4 || tfg5) ? 1 : 0;
+    return { tfg1, tfg2, tfg3, tfg4, tfg5, tfgTotal };
+}
+
 
 // --- Orchestrator Function ---
 
 export function computeAllKpisForRow(input: KpiInput): Omit<KpiResults, 'DENOMINADOR_HTA_MENORES' | 'POBLACION_DM_TOTAL'> {
     const htaMayoresResult = calculateHtaMayores(input);
     const dmControladosResult = calculateDmControlados(input);
+    const tfgResult = calculateTfgEstadios(input);
 
     return {
         NUMERADOR_HTA: calculateHtaControlado(input),
@@ -161,5 +185,11 @@ export function computeAllKpisForRow(input: KpiInput): Omit<KpiResults, 'DENOMIN
         NUMERADOR_HBA1C: calculateNumeradorHba1c(input),
         NUMERADOR_MICROALBUMINURIA: calculateNumeradorMicroalbuminuria(input),
         NUMERADOR_INASISTENTE: calculateInasistenteAControles(input),
+        TFG_E1: tfgResult.tfg1,
+        TFG_E2: tfgResult.tfg2,
+        TFG_E3: tfgResult.tfg3,
+        TFG_E4: tfgResult.tfg4,
+        TFG_E5: tfgResult.tfg5,
+        TFG_TOTAL: tfgResult.tfgTotal,
     };
 }

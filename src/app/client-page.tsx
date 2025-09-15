@@ -456,11 +456,21 @@ export default function ClientPage() {
     { label: 'Microalbuminuria Tomada (DM)', key: 'NUMERADOR_MICROALBUMINURIA', description: 'Pacientes DM con microalbuminuria en últimos 12 meses.' },
   ] : [];
 
+  const tfgKpis = kpis ? [
+    { label: 'Estadio 1', key: 'TFG_E1', description: 'Pacientes en Estadio 1 (TFG >= 90)' },
+    { label: 'Estadio 2', key: 'TFG_E2', description: 'Pacientes en Estadio 2 (TFG 60-89)' },
+    { label: 'Estadio 3', key: 'TFG_E3', description: 'Pacientes en Estadio 3 (TFG 30-59)' },
+    { label: 'Estadio 4', key: 'TFG_E4', description: 'Pacientes en Estadio 4 (TFG 15-29)' },
+    { label: 'Estadio 5', key: 'TFG_E5', description: 'Pacientes en Estadio 5 (TFG < 15)' },
+    { label: 'Total con Estadio', key: 'TFG_TOTAL', description: 'Total pacientes con estadio TFG informado.' },
+  ] : [];
+
+
   const issues = lastResults?.issues || { dates: [], nums: [], cats: [] };
 
   const chartDataHTA = kpis ? [
     { name: 'HTA General', Numerador: kpis.NUMERADOR_HTA, Denominador: kpis.DENOMINADOR_HTA_MENORES },
-    { name: 'HTA <60', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
+    { name: 'HTA <60', Numerador: kpis.NUMERador_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
     { name: 'HTA >=60', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
   ] : [];
 
@@ -609,6 +619,20 @@ export default function ClientPage() {
                           </div>
                         ))}
                          <div className="border-t pt-8 space-y-4">
+                            <h3 className="font-semibold text-card-foreground">Resultados TFG por Estadio</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                               {tfgKpis.map(({ label, key, description }) => (
+                                    <Card key={key} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
+                                        <div>
+                                            <p className="text-2xl font-bold text-primary">{(kpis as any)[key] ?? 0}</p>
+                                            <p className="font-semibold mt-1">{label}</p>
+                                        </div>
+                                        <p className="text-muted-foreground mt-2">{description}</p>
+                                    </Card>
+                               ))}
+                            </div>
+                        </div>
+                         <div className="border-t pt-8 space-y-4">
                             <h3 className="font-semibold text-card-foreground">Otros Indicadores y Métricas</h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                {otherKpis.map(({ label, key, description, isPercentage, value }) => (
@@ -705,7 +729,7 @@ export default function ClientPage() {
                                  <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
                                     {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
                                     {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
-                                </Button>
+                                 </Button>
                             </div>
                         </div>
                     </CardContent>
