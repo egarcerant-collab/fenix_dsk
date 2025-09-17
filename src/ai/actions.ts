@@ -134,24 +134,28 @@ const processLocalTestFileFlow = ai.defineFlow(
         outputSchema: ProcessFileResponseSchema,
     },
     async ({ year, month }) => {
-        const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', 'JEFE LIRENIS JULIO 2025.xlsx');
+        const testFileName = 'JEFE LIRENIS JULIO 2025.xlsx';
+        const dirPath = path.join(process.cwd(), 'public', 'BASES DE DATOS');
+        const filePath = path.join(dirPath, testFileName);
         
         try {
             if (!fs.existsSync(filePath)) {
-                 throw new Error('No se pudo encontrar el archivo de prueba local "JEFE LIRENIS JULIO 2025.xlsx" en la carpeta /public/BASES DE DATOS/.');
+                 // Check if any other xlsx file exists to provide a better error message
+                const allFiles = fs.readdirSync(dirPath);
+                const xlsxFiles = allFiles.filter(f => f.toLowerCase().endsWith('.xlsx'));
+                
+                if (xlsxFiles.length > 0) {
+                     return processLocalFileFlow({ filePath: xlsxFiles[0], year, month });
+                }
+
+                throw new Error(`No se pudo encontrar el archivo de prueba local "${testFileName}" ni ningún otro archivo .xlsx en la carpeta /public/BASES DE DATOS/.`);
             }
-            const fileBuffer = fs.readFileSync(filePath);
+           
+            return processLocalFileFlow({ filePath: testFileName, year, month });
 
-            return await processFileBufferFlow({
-                fileBuffer,
-                fileName: 'JEFE LIRENIS JULIO 2025.xlsx',
-                year,
-                month
-            });
-
-        } catch (error) {
-            console.error('Error reading local test file:', error);
-            throw new Error('No se pudo encontrar o leer el archivo de prueba local "JEFE LIRENIS JULIO 2025.xlsx" en la carpeta /public/BASES DE DATOS/.');
+        } catch (error: any) {
+            console.error('Error in local test file flow:', error);
+            throw new Error(`No se pudo procesar el archivo de prueba local: ${error.message}`);
         }
     }
 );
