@@ -683,27 +683,27 @@ export default function ClientPage() {
             <AccordionItem value="item-1">
               <AccordionTrigger>Verificar Modelos de IA Disponibles</AccordionTrigger>
               <AccordionContent>
-                <Card className="border-none shadow-none">
-                    <CardHeader>
-                        <CardTitle className="text-base">Modelos de IA</CardTitle>
-                        <CardDescription>Esta es la lista de modelos de Google AI que están disponibles para ser usados por la aplicación.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button onClick={handleFetchModels} disabled={isFetchingModels}>
-                            {isFetchingModels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cpu className="mr-2 h-4 w-4" />}
-                            Ver Modelos Disponibles
-                        </Button>
-                        {availableModels.length > 0 && (
-                            <div className="mt-4 p-4 bg-muted rounded-md">
-                                <ul className="list-disc pl-5 space-y-1 text-sm">
-                                    {availableModels.map(model => (
-                                        <li key={model}><code>{model}</code></li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                 <div className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="font-semibold">Modelos de IA</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Esta es la lista de modelos de Google AI que están disponibles para ser usados por la aplicación.
+                      </p>
+                    </div>
+                    <Button onClick={handleFetchModels} disabled={isFetchingModels}>
+                        {isFetchingModels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cpu className="mr-2 h-4 w-4" />}
+                        Ver Modelos Disponibles
+                    </Button>
+                    {availableModels.length > 0 && (
+                        <div className="mt-4 p-4 bg-muted rounded-md">
+                            <ul className="list-disc pl-5 space-y-1 text-sm">
+                                {availableModels.map(model => (
+                                    <li key={model}><code>{model}</code></li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                 </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
