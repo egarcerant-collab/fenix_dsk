@@ -1,11 +1,12 @@
 
+'use server';
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 export type PopulationData = { hta: number; dm: number };
 
-export const NORM = (s: any): string =>
+const NORM = (s: any): string =>
   (s ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .trim().toUpperCase().replace(/\s+/g, ' ') : '');
 
