@@ -12,6 +12,9 @@ import {ProcessFileRequestSchema, ProcessFileResponseSchema, ProcessFileInput, R
 import * as fs from 'fs';
 import * as path from 'path';
 import {z} from 'zod';
+import { config } from 'dotenv';
+
+config(); // Cargar variables de entorno desde .env
 
 export async function listFiles(): Promise<string[]> {
     const dirPath = path.join(process.cwd(), 'public', 'BASES DE DATOS');
@@ -101,11 +104,11 @@ const processLocalFileFlow = ai.defineFlow(
         outputSchema: ProcessFileResponseSchema,
     },
     async ({ filePath, year, month }) => {
-        const fullPath = path.join(process.cwd(), 'public', 'BASES DE DATOS', filePath);
+        const fullPath = path.join(process.cwd(), filePath);
         
         try {
             if (!fs.existsSync(fullPath)) {
-                throw new Error(`El archivo "${filePath}" no se encuentra en el servidor.`);
+                throw new Error(`El archivo "${filePath}" no se encuentra en el servidor en la ruta: ${fullPath}`);
             }
             const fileBuffer = fs.readFileSync(fullPath);
 
@@ -134,28 +137,19 @@ const processLocalTestFileFlow = ai.defineFlow(
         outputSchema: ProcessFileResponseSchema,
     },
     async ({ year, month }) => {
-        const testFileName = 'JEFE LIRENIS JULIO 2025.xlsx';
-        const dirPath = path.join(process.cwd(), 'public', 'BASES DE DATOS');
-        const filePath = path.join(dirPath, testFileName);
-        
+        const testFilePath = process.env.TEST_FILE_PATH;
+
+        if (!testFilePath) {
+            throw new Error("La variable de entorno TEST_FILE_PATH no está definida en el archivo .env");
+        }
+
         try {
-            if (!fs.existsSync(filePath)) {
-                 // Check if any other xlsx file exists to provide a better error message
-                const allFiles = fs.readdirSync(dirPath);
-                const xlsxFiles = allFiles.filter(f => f.toLowerCase().endsWith('.xlsx'));
-                
-                if (xlsxFiles.length > 0) {
-                     return processLocalFileFlow({ filePath: xlsxFiles[0], year, month });
-                }
-
-                throw new Error(`No se pudo encontrar el archivo de prueba local "${testFileName}" ni ningún otro archivo .xlsx en la carpeta /public/BASES DE DATOS/.`);
-            }
-           
-            return processLocalFileFlow({ filePath: testFileName, year, month });
-
+            // El flujo processLocalFileFlow ya construye la ruta completa con process.cwd()
+            return await processLocalFileFlow({ filePath: testFilePath, year, month });
         } catch (error: any) {
             console.error('Error in local test file flow:', error);
-            throw new Error(`No se pudo procesar el archivo de prueba local: ${error.message}`);
+            // Propagar el error del flujo subyacente que ya es descriptivo
+            throw error;
         }
     }
 );
