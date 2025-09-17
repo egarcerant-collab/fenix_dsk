@@ -50,6 +50,7 @@ export default function ClientPage() {
   
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-1.5-pro-latest');
 
 
   const fetchFiles = useCallback(() => {
@@ -200,6 +201,10 @@ export default function ClientPage() {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
     }
+    if (!selectedModel) {
+      toast({ title: 'Error', description: 'Por favor, seleccione un modelo de IA antes de generar el PDF.', variant: 'destructive' });
+      return;
+    }
     setIsGeneratingPdf(true);
     toast({ title: 'Generando PDF con IA...', description: 'Redactando análisis, esto puede tardar un momento.' });
 
@@ -238,7 +243,8 @@ export default function ClientPage() {
                 year: yearForPdf,
                 month: monthForPdf,
                 monthName: monthName
-            }
+            },
+            model: selectedModel,
         });
         
         const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio);
@@ -483,7 +489,7 @@ export default function ClientPage() {
       title: 'Resultado HTA < 60 años',
       cards: [
         { label: 'HTA Controlado <60 (Numerador)', key: 'NUMERADOR_HTA_MENORES', description: 'Pacientes HTA (18-59a) con PA < 140/90.' },
-        { label: 'Población HTA <60 (Denominador)', key: 'DENOMINADOR_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
+        { label: 'Población HTA <60 (Denominador)', key: 'DENOMINador_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
         { label: 'Resultado HTA <60', key: 'RESULTADO_HTA_MENORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? kpis.NUMERADOR_HTA_MENORES / kpis.DENOMINADOR_HTA_MENORES_ARCHIVO : 0), description: '(Numerador / Denominador)' },
       ]
     },
@@ -681,21 +687,35 @@ export default function ClientPage() {
           
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
-              <AccordionTrigger>Verificar Modelos de IA Disponibles</AccordionTrigger>
+              <AccordionTrigger>Verificar y Seleccionar Modelo de IA</AccordionTrigger>
               <AccordionContent>
                  <div className="space-y-4">
                     <div className="space-y-1">
                       <h3 className="font-semibold">Modelos de IA</h3>
                       <p className="text-sm text-muted-foreground">
-                        Esta es la lista de modelos de Google AI que están disponibles para ser usados por la aplicación.
+                        Seleccione el modelo de IA que se usará para generar los informes en PDF. Puede verificar los modelos disponibles si lo desea.
                       </p>
                     </div>
-                    <Button onClick={handleFetchModels} disabled={isFetchingModels}>
-                        {isFetchingModels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cpu className="mr-2 h-4 w-4" />}
-                        Ver Modelos Disponibles
-                    </Button>
-                    {availableModels.length > 0 && (
+                    <div className="flex items-center gap-4">
+                        <Button onClick={handleFetchModels} disabled={isFetchingModels}>
+                            {isFetchingModels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cpu className="mr-2 h-4 w-4" />}
+                            Verificar Modelos
+                        </Button>
+                        <Select value={selectedModel} onValueChange={setSelectedModel} disabled={isGeneratingPdf || isProcessing}>
+                            <SelectTrigger className="w-[280px]">
+                                <SelectValue placeholder="Seleccionar Modelo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableModels.length > 0 ? availableModels.map(model => (
+                                    <SelectItem key={model} value={model}>{model}</SelectItem>
+                                )) : <SelectItem value={selectedModel} disabled>{selectedModel}</SelectItem>}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {isFetchingModels && availableModels.length === 0 && <p className="text-sm text-muted-foreground">Buscando modelos...</p>}
+                    {availableModels.length > 0 && !isFetchingModels && (
                         <div className="mt-4 p-4 bg-muted rounded-md">
+                            <p className="text-sm font-medium mb-2">Modelos encontrados:</p>
                             <ul className="list-disc pl-5 space-y-1 text-sm">
                                 {availableModels.map(model => (
                                     <li key={model}><code>{model}</code></li>
