@@ -812,9 +812,3 @@ export default function ClientPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
