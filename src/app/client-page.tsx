@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
-import { processSelectedFile, processLocalTestFile, listFiles } from '@/ai/actions';
+import { processSelectedFile, listFiles } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -28,16 +28,6 @@ import { Toaster } from '@/components/ui/toaster';
 declare global {
   interface Window { XLSX: any; }
 }
-
-const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-};
-
 
 export default function ClientPage() {
   const { toast } = useToast();
@@ -66,6 +56,8 @@ export default function ClientPage() {
         setAvailableFiles(files);
         if (files.length > 0) {
             setSelectedFile(files[0]);
+        } else {
+             toast({ title: 'Advertencia', description: 'No se encontraron archivos .xlsx en /public/BASES DE DATOS/. Recompile la aplicación si ha añadido archivos nuevos.', variant: 'default' });
         }
     }).catch(err => {
         console.error("Failed to list files:", err);
@@ -116,13 +108,6 @@ export default function ClientPage() {
     startProcessing(processSelectedFile(selectedFile, Number(selectedYear), Number(selectedMonth)));
   };
 
- const handleProcessLocal = async () => {
-    if (!selectedYear || !selectedMonth) {
-        toast({ title: 'Error', description: 'Por favor, seleccione mes y año.', variant: 'destructive' });
-        return;
-    }
-     startProcessing(processLocalTestFile(Number(selectedYear), Number(selectedMonth)));
- }
 
  const mapToInformeDatos = (
     resultsForPdf: DataProcessingResult,
@@ -629,10 +614,6 @@ export default function ClientPage() {
                   <Button onClick={handleProcess} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isProcessing || !selectedFile}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
                     {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
-                  </Button>
-                   <Button onClick={handleProcessLocal} variant="outline" className="w-full" disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
-                    Procesar Prueba
                   </Button>
                 </div>
               </div>
