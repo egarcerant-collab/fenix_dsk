@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
-import { processUploadedFile, processLocalTestFile } from '@/ai/actions';
+import { processSelectedFile, processLocalTestFile, listFiles } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -46,7 +46,8 @@ export default function ClientPage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('Listo para procesar.');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [availableFiles, setAvailableFiles] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
@@ -60,6 +61,16 @@ export default function ClientPage() {
         setSelectedMonth(String(now.getMonth() + 1));
         setSelectedYear(now.getFullYear());
     }
+
+    listFiles().then(files => {
+        setAvailableFiles(files);
+        if (files.length > 0) {
+            setSelectedFile(files[0]);
+        }
+    }).catch(err => {
+        console.error("Failed to list files:", err);
+        toast({ title: 'Error', description: 'No se pudieron cargar los archivos del servidor.', variant: 'destructive' });
+    });
 
     const interval = setInterval(() => {
       if (typeof window.XLSX !== 'undefined') {
@@ -94,7 +105,7 @@ export default function ClientPage() {
 
  const handleProcess = async () => {
     if (!selectedFile) {
-        toast({ title: 'Error', description: 'Por favor, seleccione un archivo .xlsx o .xls', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Por favor, seleccione un archivo de la lista.', variant: 'destructive' });
         return;
     }
     if (!selectedYear || !selectedMonth) {
@@ -102,12 +113,7 @@ export default function ClientPage() {
         return;
     }
 
-    const fileDataUri = await fileToDataUri(selectedFile);
-    startProcessing(processUploadedFile({
-      fileDataUri,
-      year: Number(selectedYear),
-      month: Number(selectedMonth)
-    }));
+    startProcessing(processSelectedFile(selectedFile, Number(selectedYear), Number(selectedMonth)));
   };
 
  const handleProcessLocal = async () => {
@@ -550,7 +556,7 @@ export default function ClientPage() {
         strategy="lazyOnload"
         onLoad={() => setXlsxLoaded(true)}
       />
-
+      <Toaster />
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
           <div className="container mx-auto flex items-center justify-center relative">
@@ -573,15 +579,21 @@ export default function ClientPage() {
             <CardContent>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                 <div className="grid gap-2">
-                  <Label htmlFor="fileInput">Archivo de Datos (.xlsx)</Label>
-                  <Input
-                    id="fileInput"
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    disabled={isProcessing}
-                    className="file:text-primary file:font-semibold"
-                  />
+                  <Label htmlFor="fileSelect">Archivo de Datos (.xlsx)</Label>
+                  <Select value={selectedFile} onValueChange={setSelectedFile} disabled={isProcessing}>
+                    <SelectTrigger id="fileSelect">
+                      <SelectValue placeholder="Seleccione un archivo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableFiles.length > 0 ? (
+                        availableFiles.map(file => (
+                          <SelectItem key={file} value={file}>{file}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>No hay archivos en /public/BASES DE DATOS/</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid gap-2">
@@ -795,7 +807,7 @@ export default function ClientPage() {
              </div>
           )}
         </main>
-        <Toaster />
+        
       </div>
     </>
   );

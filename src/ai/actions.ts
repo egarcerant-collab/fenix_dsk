@@ -13,6 +13,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {z} from 'zod';
 
+export async function listFiles(): Promise<string[]> {
+    const dirPath = path.join(process.cwd(), 'public', 'BASES DE DATOS');
+    try {
+        const files = fs.readdirSync(dirPath);
+        return files.filter(file => file.toLowerCase().endsWith('.xlsx'));
+    } catch (error) {
+        console.error('Error reading database directory:', error);
+        // If the directory doesn't exist, create it and return an empty array
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+        return [];
+    }
+}
+
+export async function processSelectedFile(filePath: string, year: number, month: number): Promise<DataProcessingResult> {
+    return processLocalFileFlow({ filePath, year, month });
+}
+
+
 export async function processUploadedFile(input: ProcessFileInput): Promise<DataProcessingResult> {
     return processFileFlow(input);
 }
@@ -70,6 +90,37 @@ const processFileFlow = ai.defineFlow(
     });
   }
 );
+
+const processLocalFileFlow = ai.defineFlow(
+    {
+        name: 'processLocalFileFlow',
+        inputSchema: z.object({
+            filePath: z.string(),
+            year: z.number(),
+            month: z.number(),
+        }),
+        outputSchema: ProcessFileResponseSchema,
+    },
+    async ({ filePath, year, month }) => {
+        const fullPath = path.join(process.cwd(), 'public', 'BASES DE DATOS', filePath);
+        
+        try {
+            const fileBuffer = fs.readFileSync(fullPath);
+
+            return await processFileBufferFlow({
+                fileBuffer,
+                fileName: path.basename(filePath),
+                year,
+                month
+            });
+
+        } catch (error) {
+            console.error('Error reading local file:', error);
+            throw new Error(`No se pudo encontrar o leer el archivo "${filePath}" en la carpeta /public/BASES DE DATOS/.`);
+        }
+    }
+);
+
 
 const processLocalTestFileFlow = ai.defineFlow(
     {

@@ -1,0 +1,1 @@
+Este archivo es un placeholder para asegurar que el directorio 'BASES DE DATOS' sea creado. Puedes eliminarlo de forma segura.
