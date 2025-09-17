@@ -1,14 +1,14 @@
 
 
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
+import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
 import { processSelectedFile, listFiles } from '@/ai/actions';
@@ -45,9 +45,11 @@ export default function ClientPage() {
 
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
 
-  useEffect(() => {
+  const fetchFiles = useCallback(() => {
+    setIsRefreshing(true);
     listFiles().then(files => {
         setAvailableFiles(files);
         const years = [...new Set(files.map(f => f.split('/')[0]))].sort().reverse();
@@ -55,20 +57,20 @@ export default function ClientPage() {
 
         if (years.length > 0) {
             const latestYear = years[0];
-            setSelectedYear(latestYear);
-            const filesForYear = files.filter(f => f.startsWith(`${latestYear}/`));
-            if (filesForYear.length > 0) {
-                 setSelectedFile(filesForYear[0]);
-            }
-        } else if (files.length > 0) {
-            setSelectedFile(files[0]);
-        } else {
+            setSelectedYear(currentYear => years.includes(currentYear) ? currentYear : latestYear);
+        } else if (files.length === 0) {
              toast({ title: 'Advertencia', description: 'No se encontraron archivos .xlsx en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
         }
     }).catch(err => {
         console.error("Failed to list files:", err);
         toast({ title: 'Error', description: 'No se pudo cargar la lista de archivos desde el servidor.', variant: 'destructive' });
+    }).finally(() => {
+        setIsRefreshing(false);
     });
+  }, [toast]);
+
+  useEffect(() => {
+    fetchFiles();
 
     const interval = setInterval(() => {
       if (typeof window.XLSX !== 'undefined') {
@@ -77,7 +79,7 @@ export default function ClientPage() {
       }
     }, 500);
     return () => clearInterval(interval);
-  }, [toast]);
+  }, [fetchFiles]);
 
  const filteredFiles = useMemo(() => {
     if (!selectedYear) return [];
@@ -634,6 +636,10 @@ export default function ClientPage() {
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
                     {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
                   </Button>
+                   <Button onClick={fetchFiles} variant="outline" size="icon" className="w-10" disabled={isRefreshing}>
+                        {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        <span className="sr-only">Actualizar lista</span>
+                   </Button>
                 </div>
               </div>
 
@@ -812,3 +818,5 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
