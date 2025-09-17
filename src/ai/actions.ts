@@ -5,6 +5,7 @@
  *
  * - processSelectedFile - Downloads a file from the public folder and processes it.
  * - listFiles - Fetches the manifest of available XLSX files.
+ * - listModels - Fetches the list of available AI models from the provider.
  */
 import {ai} from '@/ai/genkit';
 import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
@@ -12,6 +13,8 @@ import {ProcessFileResponseSchema} from './schemas';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import {z} from 'zod';
+import {listModels as genkitListModels} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 export async function listFiles(): Promise<string[]> {
     const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');
@@ -92,3 +95,12 @@ const processFileBufferFlow = ai.defineFlow(
     return results;
   }
 );
+
+
+export async function listModels(): Promise<string[]> {
+    const models = await genkitListModels();
+    return models
+        .filter(m => m.name.startsWith('googleai/'))
+        .map(m => m.name.replace('googleai/', ''))
+        .sort();
+}

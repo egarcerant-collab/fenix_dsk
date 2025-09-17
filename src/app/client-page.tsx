@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw, Trash2 } from 'lucide-react';
+import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw, Trash2, Cpu } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
-import { processSelectedFile, listFiles } from '@/ai/actions';
+import { processSelectedFile, listFiles, listModels } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -46,6 +47,9 @@ export default function ClientPage() {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
 
 
   const fetchFiles = useCallback(() => {
@@ -454,6 +458,17 @@ export default function ClientPage() {
     setStatus('Listo para procesar.');
     setProgress(0);
   };
+  
+  const handleFetchModels = () => {
+    setIsFetchingModels(true);
+    listModels()
+        .then(setAvailableModels)
+        .catch(err => {
+            console.error("Failed to list models:", err);
+            toast({ title: 'Error', description: 'No se pudo cargar la lista de modelos de IA.', variant: 'destructive' });
+        })
+        .finally(() => setIsFetchingModels(false));
+  }
 
   const kpiGroups = kpis ? [
     {
@@ -663,6 +678,35 @@ export default function ClientPage() {
               )}
             </CardContent>
           </Card>
+          
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1">
+              <AccordionTrigger>Verificar Modelos de IA Disponibles</AccordionTrigger>
+              <AccordionContent>
+                <Card className="border-none shadow-none">
+                    <CardHeader>
+                        <CardTitle className="text-base">Modelos de IA</CardTitle>
+                        <CardDescription>Esta es la lista de modelos de Google AI que están disponibles para ser usados por la aplicación.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={handleFetchModels} disabled={isFetchingModels}>
+                            {isFetchingModels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cpu className="mr-2 h-4 w-4" />}
+                            Ver Modelos Disponibles
+                        </Button>
+                        {availableModels.length > 0 && (
+                            <div className="mt-4 p-4 bg-muted rounded-md">
+                                <ul className="list-disc pl-5 space-y-1 text-sm">
+                                    {availableModels.map(model => (
+                                        <li key={model}><code>{model}</code></li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           {lastResults && kpis && (
              <div className="grid gap-8">
