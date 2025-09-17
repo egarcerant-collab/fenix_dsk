@@ -37,20 +37,14 @@ export default function ClientPage() {
   const [status, setStatus] = useState('Listo para procesar.');
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>('');
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [selectedYear, setSelectedYear] = useState<string | number>('');
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [yearForPdf, setYearForPdf] = useState<number>(new Date().getFullYear());
+  const [monthForPdf, setMonthForPdf] = useState<number>(new Date().getMonth() + 1);
 
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const now = new Date();
-        setSelectedMonth(String(now.getMonth() + 1));
-        setSelectedYear(now.getFullYear());
-    }
-
     listFiles().then(files => {
         setAvailableFiles(files);
         if (files.length > 0) {
@@ -99,12 +93,30 @@ export default function ClientPage() {
         toast({ title: 'Error', description: 'Por favor, seleccione un archivo de la lista.', variant: 'destructive' });
         return;
     }
-    if (!selectedYear || !selectedMonth) {
-        toast({ title: 'Error', description: 'Por favor, seleccione mes y año.', variant: 'destructive' });
-        return;
+
+    const parts = selectedFile.replace('.xlsx', '').split('/');
+    if (parts.length < 2) {
+      toast({ title: 'Error de formato', description: 'El nombre del archivo no tiene el formato esperado "AÑO/MES.xlsx"', variant: 'destructive' });
+      return;
     }
 
-    startProcessing(processSelectedFile(selectedFile, Number(selectedYear), Number(selectedMonth)));
+    const year = parseInt(parts[0], 10);
+    const monthName = parts[1].toUpperCase();
+    const monthMap: { [key: string]: number } = {
+        ENERO: 1, FEBRERO: 2, MARZO: 3, ABRIL: 4, MAYO: 5, JUNIO: 6,
+        JULIO: 7, AGOSTO: 8, SEPTIEMBRE: 9, OCTUBRE: 10, NOVIEMBRE: 11, DICIEMBRE: 12
+    };
+    const month = monthMap[monthName];
+
+    if (isNaN(year) || !month) {
+        toast({ title: 'Error de formato', description: 'No se pudo extraer el mes y el año del nombre del archivo.', variant: 'destructive' });
+        return;
+    }
+    
+    setYearForPdf(year);
+    setMonthForPdf(month);
+
+    startProcessing(processSelectedFile(selectedFile, year, month));
   };
 
 
@@ -115,23 +127,14 @@ export default function ClientPage() {
     targetMunicipio: string | undefined
   ): InformeDatos => {
     const { R: kpis } = resultsForPdf;
-    const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
     const analysisDate = new Date();
-
-    const parseAIContent = (content: string): any[] => {
-        if (!content) return [];
-        // Expanded regex to remove more HTML tags like <b>
-        const cleanContent = content.replace(/<\/?(p|ul|li|ol|strong|b)>/g, '\n').trim();
-        const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
-        return items;
-    };
 
     return {
       encabezado: {
         proceso: 'Dirección del Riesgo en Salud',
         formato: 'Evaluación de indicadores de gestantes, hipertensos y diabéticos (código DR-PP-F-06, versión 01; emisión 18/06/2019; vigencia 02/07/2019)',
         entidad: `${targetIps || "Consolidado"} - Municipio: ${targetMunicipio || "Todos"}`,
-        vigencia: `01/01/${selectedYear}–31/12/${selectedYear}`,
+        vigencia: `01/01/${yearForPdf}–31/12/${yearForPdf}`,
         lugarFecha: `Valledupar, ${analysisDate.toLocaleDateString('es-ES')}`
       },
       referencia: aiContent.reference.replace(/<p>|<\/p>/g, ''),
@@ -152,6 +155,14 @@ export default function ClientPage() {
     };
   };
 
+  const parseAIContent = (content: string): any[] => {
+        if (!content) return [];
+        // Expanded regex to remove more HTML tags like <b>
+        const cleanContent = content.replace(/<\/?(p|ul|li|ol|strong|b)>/g, '\n').trim();
+        const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
+        return items;
+    };
+
  const handleGeneratePdf = async () => {
     if (!lastResults) {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
@@ -161,7 +172,7 @@ export default function ClientPage() {
     toast({ title: 'Generando PDF con IA...', description: 'Redactando análisis, esto puede tardar un momento.' });
 
     try {
-        const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
+        const monthName = new Date(yearForPdf, monthForPdf - 1).toLocaleString('es', { month: 'long' });
 
         let resultsForPdf: DataProcessingResult = lastResults;
         let targetIps: string | undefined;
@@ -192,8 +203,8 @@ export default function ClientPage() {
             targetIps: targetIps,
             targetMunicipio: targetMunicipio,
             corte: {
-                year: Number(selectedYear),
-                month: Number(selectedMonth),
+                year: yearForPdf,
+                month: monthForPdf,
                 monthName: monthName
             }
         });
@@ -224,7 +235,7 @@ export default function ClientPage() {
     toast({ title: 'Generando PDFs Masivos...', description: 'Esto puede tardar varios minutos. No cierre la ventana.' });
 
     const zip = new JSZip();
-    const monthName = new Date(Number(selectedYear), Number(selectedMonth) - 1).toLocaleString('es', { month: 'long' });
+    const monthName = new Date(yearForPdf, monthForPdf - 1).toLocaleString('es', { month: 'long' });
 
     const mockAiContent: AIContent = {
         reference: "<p>Análisis de indicadores de gestión del riesgo, sin redacción de IA.</p>",
@@ -274,7 +285,7 @@ export default function ClientPage() {
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Informes_Masivos_${monthName}_${selectedYear}.zip`;
+        a.download = `Informes_Masivos_${monthName}_${yearForPdf}.zip`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -552,11 +563,11 @@ export default function ClientPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Cargue y Configuración</CardTitle>
-              <CardDescription>Seleccione el archivo de datos y el período a analizar. La población HTA y DM se cruzará con el archivo <code>Poblacion 2025.csv</code> del servidor.</CardDescription>
+              <CardDescription>Seleccione el archivo de datos para analizar. El mes y año se obtendrán del nombre del archivo. La población se cruzará con <code>Poblacion 2025.csv</code>.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-                <div className="grid gap-2">
+                <div className="grid gap-2 md:col-span-3">
                   <Label htmlFor="fileSelect">Archivo de Datos (.xlsx)</Label>
                   <Select value={selectedFile} onValueChange={setSelectedFile} disabled={isProcessing}>
                     <SelectTrigger id="fileSelect">
@@ -572,35 +583,6 @@ export default function ClientPage() {
                       )}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="selMes">Mes de Carga</Label>
-                  <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(value)} disabled={isProcessing}>
-                    <SelectTrigger id="selMes">
-                      <SelectValue placeholder="Seleccione mes" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...Array(12)].map((_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>
-                          {new Date(0, i).toLocaleString('es', { month: 'long' })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="inpAnio">Año de Carga</Label>
-                  <Input
-                    id="inpAnio"
-                    type="number"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                    min="2000"
-                    max="2100"
-                    disabled={isProcessing}
-                  />
                 </div>
 
                 <div className="flex gap-2 justify-self-end self-end w-full">
