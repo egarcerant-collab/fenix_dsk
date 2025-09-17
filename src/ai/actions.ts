@@ -17,7 +17,6 @@ export async function listFiles(): Promise<string[]> {
     const manifestUrl = `${baseUrl}/bases-manifest.json`;
 
     try {
-        // Use a relative URL for server-side fetch within the same app
         const internalUrl = new URL(manifestUrl, 'http://localhost:9002');
         const res = await fetch(internalUrl, { cache: "no-store" });
 
@@ -39,11 +38,12 @@ export async function listFiles(): Promise<string[]> {
 export async function processSelectedFile(fileName: string, year: number, month: number): Promise<DataProcessingResult> {
     
     const baseUrl = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    // Ensure the folder name is correctly encoded in the URL
-    const fileUrl = `${baseUrl}/BASES%20DE%20DATOS/${encodeURIComponent(fileName)}`;
+    // La ruta del archivo ahora puede contener subdirectorios, así que la dividimos y la codificamos
+    const encodedPathParts = fileName.split('/').map(part => encodeURIComponent(part));
+    const encodedFileName = encodedPathParts.join('/');
+    const fileUrl = `${baseUrl}/BASES%20DE%20DATOS/${encodedFileName}`;
 
     try {
-        // Use a relative URL for server-side fetch within the same app
         const internalUrl = new URL(fileUrl, 'http://localhost:9002');
         const res = await fetch(internalUrl, { cache: 'no-store' });
 
@@ -55,7 +55,7 @@ export async function processSelectedFile(fileName: string, year: number, month:
 
         return await processFileBufferFlow({
             fileBuffer,
-            fileName: fileName,
+            fileName: path.basename(fileName), // Pasamos solo el nombre del archivo para mantener la lógica original
             year,
             month
         });
@@ -95,4 +95,3 @@ const processFileBufferFlow = ai.defineFlow(
     return results;
   }
 );
-
