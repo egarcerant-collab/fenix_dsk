@@ -422,7 +422,7 @@ export default function ClientPage() {
 
   const kpiGroups = kpis ? [
     {
-      title: 'Resultado HTA General',
+      title: 'Resultado Captacion HTA',
       cards: [
         { label: 'Pacientes HTA (Numerador)', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) encontrados en el archivo.' },
         { label: 'Población HTA (Denominador)', key: 'DENOMINADOR_HTA_MENORES', description: 'Total de pacientes con diagnóstico de HTA según archivo de población.' },
@@ -442,7 +442,7 @@ export default function ClientPage() {
       cards: [
         { label: 'HTA Controlado >=60 (Numerador)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (>=60a, sin DM) con PA < 150/90.' },
         { label: 'Población HTA >=60 (Denominador)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (>=60a, sin DM) del archivo cargado.' },
-        { label: 'Resultado HTA >=60', key: 'RESULTADO_HTA_MAYORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador / Denominador)' },
+        { label: 'Resultado HTA >=60', key: 'RESULTADO_HTA_MAORIES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador / Denominador)' },
       ]
     },
      {
@@ -510,7 +510,7 @@ export default function ClientPage() {
 
   const chartDataHTA = kpis ? [
     { name: 'HTA General', Numerador: kpis.NUMERADOR_HTA, Denominador: kpis.DENOMINADOR_HTA_MENORES },
-    { name: 'HTA <60', Numerador: kpis.NUMERador_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
+    { name: 'HTA <60', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
     { name: 'HTA >=60', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
   ] : [];
 
@@ -803,3 +803,4 @@ export default function ClientPage() {
 
     
 
+    
