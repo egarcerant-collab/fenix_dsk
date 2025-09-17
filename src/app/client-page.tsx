@@ -80,7 +80,7 @@ export default function ClientPage() {
   }, [toast]);
 
  const filteredFiles = useMemo(() => {
-    if (!selectedYear) return availableFiles;
+    if (!selectedYear) return [];
     return availableFiles.filter(file => file.startsWith(`${selectedYear}/`));
   }, [selectedYear, availableFiles]);
 
@@ -548,7 +548,7 @@ export default function ClientPage() {
   ] : [];
 
   const chartDataOtros = kpis ? [
-      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_CREATINina },
+      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_CREATININA },
       { name: 'HbA1c Tomada', Numerador: kpis.NUMERADOR_HBA1C, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
       { name: 'Microalbuminuria Tomada', Numerador: kpis.NUMERADOR_MICROALBUMINURIA, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
   ] : [];
@@ -620,7 +620,7 @@ export default function ClientPage() {
                     <SelectContent>
                       {filteredFiles.length > 0 ? (
                         filteredFiles.map(file => (
-                          <SelectItem key={file} value={file}>{file.split('/')[1]}</SelectItem>
+                          <SelectItem key={file} value={file}>{file.split('/')[1].replace(/\.xlsx$/i, '')}</SelectItem>
                         ))
                       ) : (
                         <SelectItem value="no-files" disabled>No hay archivos para este año</SelectItem>
