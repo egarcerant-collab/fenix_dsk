@@ -26,6 +26,8 @@ function findXlsxFiles(dir: string, baseDirForRelative: string): string[] {
 }
 
 function main() {
+  const outPath = path.join(process.cwd(), "public", "bases-manifest.json");
+
   if (!fs.existsSync(baseDir)) {
     console.warn("Advertencia: No se encontró la carpeta 'public/BASES DE DATOS'. Se generará un manifiesto vacío.");
     
@@ -34,14 +36,12 @@ function main() {
       fs.mkdirSync(publicDir);
     }
     
-    const outPath = path.join(publicDir, "bases-manifest.json");
     fs.writeFileSync(outPath, JSON.stringify({ folder: "BASES DE DATOS", files: [] }, null, 2), "utf8");
     return;
   }
   
   const files = findXlsxFiles(baseDir, baseDir).sort();
 
-  const outPath = path.join(process.cwd(), "public", "bases-manifest.json");
   fs.writeFileSync(outPath, JSON.stringify({ folder: "BASES DE DATOS", files }, null, 2), "utf8");
   console.log(`Manifiesto generado: ${outPath} (${files.length} archivos)`);
 }

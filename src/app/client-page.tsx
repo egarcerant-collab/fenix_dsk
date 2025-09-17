@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from '@/components/ui/badge';
-import { FileUp, FileDown, Library, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
+import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
 import { processSelectedFile, listFiles } from '@/ai/actions';
@@ -546,12 +545,6 @@ export default function ClientPage() {
         <header className="bg-card py-4 px-6 border-b">
           <div className="container mx-auto flex items-center justify-center relative">
             <h1 className="font-bold text-primary text-2xl uppercase">indicadores fenix</h1>
-            <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                <Badge variant={xlsxLoaded ? "secondary" : "destructive"}>
-                  <Library className="mr-2 h-4 w-4"/>
-                  XLSX: {xlsxLoaded ? 'Cargado' : 'No Cargado'}
-                </Badge>
-            </div>
           </div>
         </header>
 
