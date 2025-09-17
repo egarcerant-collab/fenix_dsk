@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
@@ -24,7 +23,6 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body suppressHydrationWarning className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
         {children}
-        <Toaster />
       </body>
     </html>
   );

@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import JSZip from 'jszip';
 import { descargarInformePDF, buildDocDefinition, InformeDatos, PdfImages } from '@/lib/informe-riesgo-pdf';
 import { loadImageAsBase64 } from '@/lib/image-loader';
+import { Toaster } from '@/components/ui/toaster';
 
 
 // Make XLSX global if it's loaded from a script
@@ -794,6 +795,7 @@ export default function ClientPage() {
              </div>
           )}
         </main>
+        <Toaster />
       </div>
     </>
   );
