@@ -625,14 +625,14 @@ export default function ClientPage() {
                   />
                 </div>
 
-                <div className="flex gap-2 justify-self-end self-end w-full md:w-auto">
-                   <Button onClick={handleProcessLocal} variant="outline" className="w-full" disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
-                    Procesar Prueba
-                  </Button>
+                <div className="flex gap-2 justify-self-end self-end w-full">
                   <Button onClick={handleProcess} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isProcessing || !selectedFile}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
                     {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
+                  </Button>
+                   <Button onClick={handleProcessLocal} variant="outline" className="w-full" disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+                    Procesar Prueba
                   </Button>
                 </div>
               </div>

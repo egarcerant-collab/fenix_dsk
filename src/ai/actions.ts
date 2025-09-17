@@ -30,7 +30,8 @@ export async function listFiles(): Promise<string[]> {
     }
 }
 
-export async function processSelectedFile(filePath: string, year: number, month: number): Promise<DataProcessingResult> {
+export async function processSelectedFile(fileName: string, year: number, month: number): Promise<DataProcessingResult> {
+    const filePath = path.join('public', 'BASES DE DATOS', fileName);
     return processLocalFileFlow({ filePath, year, month });
 }
 
@@ -108,7 +109,7 @@ const processLocalFileFlow = ai.defineFlow(
         
         try {
             if (!fs.existsSync(fullPath)) {
-                throw new Error(`El archivo "${filePath}" no se encuentra en el servidor en la ruta: ${fullPath}`);
+                throw new Error(`El archivo "${path.basename(filePath)}" no se encuentra en el servidor en la ruta: ${fullPath}`);
             }
             const fileBuffer = fs.readFileSync(fullPath);
 
@@ -121,7 +122,7 @@ const processLocalFileFlow = ai.defineFlow(
 
         } catch (error: any) {
             console.error('Error reading local file:', error);
-            throw new Error(`Error al leer el archivo "${filePath}": ${error.message}`);
+            throw new Error(`Error al leer el archivo "${path.basename(filePath)}": ${error.message}`);
         }
     }
 );
@@ -138,18 +139,29 @@ const processLocalTestFileFlow = ai.defineFlow(
     },
     async ({ year, month }) => {
         const testFilePath = process.env.TEST_FILE_PATH;
-
+        
         if (!testFilePath) {
-            throw new Error("La variable de entorno TEST_FILE_PATH no está definida en el archivo .env");
+           const dirPath = path.join(process.cwd(), 'public', 'BASES DE DATOS');
+           let files: string[] = [];
+           if (fs.existsSync(dirPath)) {
+               files = fs.readdirSync(dirPath).filter(f => f.toLowerCase().endsWith('.xlsx'));
+           }
+
+           if (files.length > 0) {
+               const fileToProcess = files.includes('JEFE LIRENIS JULIO 2025.xlsx') ? 'JEFE LIRENIS JULIO 2025.xlsx' : files[0];
+               const resolvedPath = path.join('public', 'BASES DE DATOS', fileToProcess);
+               return await processLocalFileFlow({ filePath: resolvedPath, year, month });
+           } else {
+               throw new Error("No se pudo encontrar el archivo de prueba local 'JEFE LIRENIS JULIO 2025.xlsx' ni ningún otro archivo .xlsx en la carpeta /public/BASES DE DATOS/.");
+           }
         }
 
         try {
-            // El flujo processLocalFileFlow ya construye la ruta completa con process.cwd()
             return await processLocalFileFlow({ filePath: testFilePath, year, month });
         } catch (error: any) {
             console.error('Error in local test file flow:', error);
-            // Propagar el error del flujo subyacente que ya es descriptivo
             throw error;
         }
     }
 );
+
