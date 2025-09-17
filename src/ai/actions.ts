@@ -11,9 +11,6 @@ import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
 import {ProcessFileResponseSchema} from './schemas';
 import * as path from 'path';
 import {z} from 'zod';
-import { config } from 'dotenv';
-
-config(); // Cargar variables de entorno desde .env
 
 export async function listFiles(): Promise<string[]> {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_PATH || '';
