@@ -79,7 +79,7 @@ export default function ClientPage() {
       }
     }, 500);
     return () => clearInterval(interval);
-  }, []);
+  }, [toast]);
 
 
  const startProcessing = (action: Promise<DataProcessingResult>) => {
@@ -590,7 +590,7 @@ export default function ClientPage() {
                           <SelectItem key={file} value={file}>{file}</SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>No hay archivos en /public/BASES DE DATOS/</SelectItem>
+                        <SelectItem value="no-files" disabled>No hay archivos en /public/BASES DE DATOS/</SelectItem>
                       )}
                     </SelectContent>
                   </Select>

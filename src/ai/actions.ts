@@ -16,14 +16,13 @@ import {z} from 'zod';
 export async function listFiles(): Promise<string[]> {
     const dirPath = path.join(process.cwd(), 'public', 'BASES DE DATOS');
     try {
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
         const files = fs.readdirSync(dirPath);
         return files.filter(file => file.toLowerCase().endsWith('.xlsx'));
     } catch (error) {
         console.error('Error reading database directory:', error);
-        // If the directory doesn't exist, create it and return an empty array
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-            fs.mkdirSync(dirPath, { recursive: true });
-        }
         return [];
     }
 }
@@ -105,6 +104,9 @@ const processLocalFileFlow = ai.defineFlow(
         const fullPath = path.join(process.cwd(), 'public', 'BASES DE DATOS', filePath);
         
         try {
+            if (!fs.existsSync(fullPath)) {
+                throw new Error(`El archivo "${filePath}" no se encuentra en el servidor.`);
+            }
             const fileBuffer = fs.readFileSync(fullPath);
 
             return await processFileBufferFlow({
@@ -114,9 +116,9 @@ const processLocalFileFlow = ai.defineFlow(
                 month
             });
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error reading local file:', error);
-            throw new Error(`No se pudo encontrar o leer el archivo "${filePath}" en la carpeta /public/BASES DE DATOS/.`);
+            throw new Error(`Error al leer el archivo "${filePath}": ${error.message}`);
         }
     }
 );
