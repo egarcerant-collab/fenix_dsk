@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw } from 'lucide-react';
+import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw, Trash2 } from 'lucide-react';
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
 import { processSelectedFile, listFiles } from '@/ai/actions';
@@ -449,6 +449,11 @@ export default function ClientPage() {
 
   }, [lastResults, filteredGroupedData, selectedDepartment]);
   
+  const handleClearResults = () => {
+    setLastResults(null);
+    setStatus('Listo para procesar.');
+    setProgress(0);
+  };
 
   const kpiGroups = kpis ? [
     {
@@ -495,7 +500,7 @@ export default function ClientPage() {
       title: 'Resultado Tamizaje Creatinina',
       cards: [
         { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
-        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
+        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATINina', description: 'Total de registros con fecha de creatinina.' },
         { 
           label: 'Resultado Creatinina', 
           key: 'RESULTADO_CREATININA',
@@ -636,10 +641,14 @@ export default function ClientPage() {
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
                     {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
                   </Button>
-                   <Button onClick={fetchFiles} variant="outline" size="icon" className="w-10" disabled={isRefreshing}>
+                   <Button onClick={fetchFiles} variant="outline" size="icon" className="flex-shrink-0" disabled={isRefreshing}>
                         {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         <span className="sr-only">Actualizar lista</span>
                    </Button>
+                    <Button onClick={handleClearResults} variant="outline" size="icon" className="flex-shrink-0" disabled={isProcessing || !lastResults}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Limpiar Resultados</span>
+                    </Button>
                 </div>
               </div>
 
@@ -818,5 +827,7 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
 
     
