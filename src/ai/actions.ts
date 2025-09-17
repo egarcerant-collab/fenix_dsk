@@ -134,9 +134,12 @@ const processLocalTestFileFlow = ai.defineFlow(
         outputSchema: ProcessFileResponseSchema,
     },
     async ({ year, month }) => {
-        const filePath = path.join(process.cwd(), 'public', 'JEFE LIRENIS JULIO 2025.xlsx');
+        const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', 'JEFE LIRENIS JULIO 2025.xlsx');
         
         try {
+            if (!fs.existsSync(filePath)) {
+                 throw new Error('No se pudo encontrar el archivo de prueba local "JEFE LIRENIS JULIO 2025.xlsx" en la carpeta /public/BASES DE DATOS/.');
+            }
             const fileBuffer = fs.readFileSync(filePath);
 
             return await processFileBufferFlow({
@@ -148,7 +151,7 @@ const processLocalTestFileFlow = ai.defineFlow(
 
         } catch (error) {
             console.error('Error reading local test file:', error);
-            throw new Error('No se pudo encontrar o leer el archivo de prueba local "JEFE LIRENIS JULIO 2025.xlsx" en la carpeta /public.');
+            throw new Error('No se pudo encontrar o leer el archivo de prueba local "JEFE LIRENIS JULIO 2025.xlsx" en la carpeta /public/BASES DE DATOS/.');
         }
     }
 );
