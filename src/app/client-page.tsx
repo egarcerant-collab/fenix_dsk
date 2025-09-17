@@ -43,11 +43,24 @@ export default function ClientPage() {
   const [yearForPdf, setYearForPdf] = useState<number>(new Date().getFullYear());
   const [monthForPdf, setMonthForPdf] = useState<number>(new Date().getMonth() + 1);
 
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>('');
+
 
   useEffect(() => {
     listFiles().then(files => {
         setAvailableFiles(files);
-        if (files.length > 0) {
+        const years = [...new Set(files.map(f => f.split('/')[0]))].sort().reverse();
+        setAvailableYears(years);
+
+        if (years.length > 0) {
+            const latestYear = years[0];
+            setSelectedYear(latestYear);
+            const filesForYear = files.filter(f => f.startsWith(`${latestYear}/`));
+            if (filesForYear.length > 0) {
+                 setSelectedFile(filesForYear[0]);
+            }
+        } else if (files.length > 0) {
             setSelectedFile(files[0]);
         } else {
              toast({ title: 'Advertencia', description: 'No se encontraron archivos .xlsx en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
@@ -65,6 +78,19 @@ export default function ClientPage() {
     }, 500);
     return () => clearInterval(interval);
   }, [toast]);
+
+ const filteredFiles = useMemo(() => {
+    if (!selectedYear) return availableFiles;
+    return availableFiles.filter(file => file.startsWith(`${selectedYear}/`));
+  }, [selectedYear, availableFiles]);
+
+  useEffect(() => {
+    if (filteredFiles.length > 0 && !filteredFiles.includes(selectedFile)) {
+      setSelectedFile(filteredFiles[0]);
+    } else if (filteredFiles.length === 0) {
+      setSelectedFile('');
+    }
+  }, [selectedYear, filteredFiles, selectedFile]);
 
 
  const startProcessing = (action: Promise<DataProcessingResult>) => {
@@ -563,23 +589,41 @@ export default function ClientPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Cargue y Configuración</CardTitle>
-              <CardDescription>Seleccione el archivo de datos para analizar. El mes y año se obtendrán del nombre del archivo. La población se cruzará con <code>Poblacion 2025.csv</code>.</CardDescription>
+              <CardDescription>Seleccione el año y el archivo de datos para analizar. La población se cruzará con <code>Poblacion 2025.csv</code>.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-                <div className="grid gap-2 md:col-span-3">
-                  <Label htmlFor="fileSelect">Archivo de Datos (.xlsx)</Label>
-                  <Select value={selectedFile} onValueChange={setSelectedFile} disabled={isProcessing}>
+               <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
+                 <div className="grid gap-2">
+                  <Label htmlFor="yearSelect">Año</Label>
+                  <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isProcessing}>
+                    <SelectTrigger id="yearSelect">
+                      <SelectValue placeholder="Seleccione un año..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableYears.length > 0 ? (
+                        availableYears.map(year => (
+                          <SelectItem key={year} value={year}>{year}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-years" disabled>No hay años disponibles</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid gap-2 md:col-span-2">
+                  <Label htmlFor="fileSelect">Archivo de Datos (Mes)</Label>
+                  <Select value={selectedFile} onValueChange={setSelectedFile} disabled={isProcessing || !selectedYear}>
                     <SelectTrigger id="fileSelect">
                       <SelectValue placeholder="Seleccione un archivo..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableFiles.length > 0 ? (
-                        availableFiles.map(file => (
-                          <SelectItem key={file} value={file}>{file}</SelectItem>
+                      {filteredFiles.length > 0 ? (
+                        filteredFiles.map(file => (
+                          <SelectItem key={file} value={file}>{file.split('/')[1]}</SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no-files" disabled>No hay archivos en /public/BASES DE DATOS/</SelectItem>
+                        <SelectItem value="no-files" disabled>No hay archivos para este año</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
