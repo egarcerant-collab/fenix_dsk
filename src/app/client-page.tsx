@@ -57,11 +57,11 @@ export default function ClientPage() {
         if (files.length > 0) {
             setSelectedFile(files[0]);
         } else {
-             toast({ title: 'Advertencia', description: 'No se encontraron archivos .xlsx en /public/BASES DE DATOS/. Recompile la aplicación si ha añadido archivos nuevos.', variant: 'default' });
+             toast({ title: 'Advertencia', description: 'No se encontraron archivos .xlsx en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
         }
     }).catch(err => {
         console.error("Failed to list files:", err);
-        toast({ title: 'Error', description: 'No se pudieron cargar los archivos del servidor.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'No se pudo cargar la lista de archivos desde el servidor.', variant: 'destructive' });
     });
 
     const interval = setInterval(() => {
@@ -512,7 +512,7 @@ export default function ClientPage() {
   ] : [];
 
   const chartDataOtros = kpis ? [
-      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_CREATININA },
+      { name: 'Creatinina Tomada', Numerador: kpis.NUMERADOR_CREATININA, Denominador: kpis.DENOMINADOR_CREATINina },
       { name: 'HbA1c Tomada', Numerador: kpis.NUMERADOR_HBA1C, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
       { name: 'Microalbuminuria Tomada', Numerador: kpis.NUMERADOR_MICROALBUMINURIA, Denominador: kpis.DENOMINADOR_DM_CONTROLADOS },
   ] : [];

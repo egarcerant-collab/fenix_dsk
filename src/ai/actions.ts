@@ -10,26 +10,22 @@ import {ai} from '@/ai/genkit';
 import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
 import {ProcessFileResponseSchema} from './schemas';
 import * as path from 'path';
+import * as fs from 'fs/promises';
 import {z} from 'zod';
 
 export async function listFiles(): Promise<string[]> {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    const manifestUrl = `${baseUrl}/bases-manifest.json`;
+    const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');
 
     try {
-        const internalUrl = new URL(manifestUrl, 'http://localhost:9002');
-        const res = await fetch(internalUrl, { cache: "no-store" });
-
-        if (!res.ok) {
-            console.error(`Error fetching manifest: ${res.statusText} from ${internalUrl.toString()}`);
-            return [];
-        }
-        
-        const data = await res.json();
+        const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+        const data = JSON.parse(manifestContent);
         return Array.isArray(data.files) ? data.files : [];
-
-    } catch (error) {
-        console.error('Error fetching file manifest:', error);
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            console.warn(`Advertencia: El archivo de manifiesto no se encontró en '${manifestPath}'. Ejecute el script de precompilación.`);
+        } else {
+            console.error('Error al leer o analizar el manifiesto de archivos:', error);
+        }
         return [];
     }
 }
@@ -44,6 +40,7 @@ export async function processSelectedFile(fileName: string, year: number, month:
     const fileUrl = `${baseUrl}/BASES%20DE%20DATOS/${encodedFileName}`;
 
     try {
+        // En el entorno del servidor de Next.js, necesitamos una URL absoluta para `fetch`
         const internalUrl = new URL(fileUrl, 'http://localhost:9002');
         const res = await fetch(internalUrl, { cache: 'no-store' });
 
