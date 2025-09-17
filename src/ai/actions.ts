@@ -17,12 +17,12 @@ export async function listFiles(): Promise<string[]> {
     const manifestUrl = `${baseUrl}/bases-manifest.json`;
 
     try {
-        // Use an absolute URL if running on the server
-        const absoluteUrl = new URL(manifestUrl, 'http://localhost:9002').toString();
-        const res = await fetch(absoluteUrl, { cache: "no-store" });
+        // Use a relative URL for server-side fetch within the same app
+        const internalUrl = new URL(manifestUrl, 'http://localhost:9002');
+        const res = await fetch(internalUrl, { cache: "no-store" });
 
         if (!res.ok) {
-            console.error(`Error fetching manifest: ${res.statusText} from ${absoluteUrl}`);
+            console.error(`Error fetching manifest: ${res.statusText} from ${internalUrl.toString()}`);
             return [];
         }
         
@@ -43,8 +43,9 @@ export async function processSelectedFile(fileName: string, year: number, month:
     const fileUrl = `${baseUrl}/BASES%20DE%20DATOS/${encodeURIComponent(fileName)}`;
 
     try {
-        const absoluteUrl = new URL(fileUrl, 'http://localhost:9002').toString();
-        const res = await fetch(absoluteUrl, { cache: 'no-store' });
+        // Use a relative URL for server-side fetch within the same app
+        const internalUrl = new URL(fileUrl, 'http://localhost:9002');
+        const res = await fetch(internalUrl, { cache: 'no-store' });
 
         if (!res.ok) {
             throw new Error(`No se pudo descargar el archivo '${fileName}' desde el servidor. Estado: ${res.status}`);
@@ -94,3 +95,4 @@ const processFileBufferFlow = ai.defineFlow(
     return results;
   }
 );
+
