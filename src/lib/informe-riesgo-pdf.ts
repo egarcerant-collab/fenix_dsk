@@ -126,7 +126,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
 
   const docDefinition: any = {
     pageSize: "A4",
-    pageMargins: [60, 74, 60, 74], 
+    pageMargins: [60, 88, 60, 74], 
     info: {
       title: "Evaluación de Indicadores – Gestión del Riesgo",
       author: "Dirección del Riesgo en Salud",
