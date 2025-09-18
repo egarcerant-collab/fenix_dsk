@@ -158,6 +158,65 @@ export default function ClientPage() {
     startProcessing(processSelectedFile(selectedFile, year, month));
   };
 
+  const getInasistentesData = (
+    relevantRows: any[][],
+    headerMap: HeaderMap
+  ) => {
+    if (!lastResults || lastResults.R.FALTANTES_ENCABEZADOS.includes('FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA')) {
+        return [];
+    }
+
+    const range6m = {
+        start: new Date(yearForPdf, monthForPdf - 6, 1),
+        end: new Date(yearForPdf, monthForPdf, 0)
+    };
+
+    return relevantRows.filter(row => {
+        const fpa_val = row[headerMap['fecha_pa_last']];
+        if (!fpa_val) return false;
+        
+        let fpa: Date | null = null;
+        if (typeof fpa_val === 'number') {
+            const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+            fpa = new Date(excelEpoch.getTime() + (fpa_val - (fpa_val > 60 ? 1 : 0)) * 86400000);
+        } else if (fpa_val instanceof Date) {
+            fpa = fpa_val;
+        } else if (typeof fpa_val === 'string') {
+            const isoMatch = fpa_val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+               const [_, y, m, d] = isoMatch;
+               fpa = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+            } else {
+               const commonMatch = fpa_val.match(/^(?:(\d{1,2})[.\/-])?(\d{1,2})[.\/-](\d{2,4})$/);
+               if (commonMatch) {
+                   let [_, p1, p2, p3] = commonMatch;
+                   let yearNum = Number(p3);
+                   if (p3.length <= 2) yearNum += 2000;
+                   if (Number(p1) > 0 && Number(p1) <= 31 && Number(p2) > 0 && Number(p2) <= 12) {
+                       fpa = new Date(Date.UTC(yearNum, Number(p2) - 1, Number(p1)));
+                   } else if (Number(p2) > 0 && Number(p2) <= 31 && Number(p1) > 0 && Number(p1) <= 12) {
+                       fpa = new Date(Date.UTC(yearNum, Number(p1) - 1, Number(p2)));
+                   }
+               }
+            }
+        }
+
+        if (fpa && fpa instanceof Date && !isNaN(fpa.getTime())) {
+            const isInRange = fpa.getTime() >= range6m.start.getTime() && fpa.getTime() <= range6m.end.getTime();
+            return !isInRange;
+        }
+        return false;
+    }).map(row => ({
+        tipo_id: row[headerMap['tipo_id']] || '',
+        id: row[headerMap['id']] || '',
+        p_nombre: row[headerMap['p_nombre']] || '',
+        s_nombre: row[headerMap['s_nombre']] || '',
+        p_apellido: row[headerMap['p_apellido']] || '',
+        s_apellido: row[headerMap['s_apellido']] || '',
+        tel: row[headerMap['tel']] || '',
+        dir: row[headerMap['dir']] || '',
+    }));
+  };
 
  const mapToInformeDatos = (
     resultsForPdf: DataProcessingResult,
@@ -165,8 +224,17 @@ export default function ClientPage() {
     targetIps: string | undefined,
     targetMunicipio: string | undefined
   ): InformeDatos => {
-    const { R: kpis } = resultsForPdf;
+    const { R: kpis, rawRows, headerMap } = resultsForPdf;
     const analysisDate = new Date();
+    
+    let relevantRows = rawRows;
+    if (targetIps && targetMunicipio) {
+        relevantRows = rawRows.filter(row => 
+            (row[headerMap['ips']] || '').toUpperCase().trim() === targetIps &&
+            (row[headerMap['municipio']] || '').toUpperCase().trim() === targetMunicipio
+        );
+    }
+    const inasistentes = getInasistentesData(relevantRows, headerMap);
 
     return {
       encabezado: {
@@ -191,6 +259,7 @@ export default function ClientPage() {
       calidadDato: parseAIContent(aiContent.dataQuality),
       observaciones: parseAIContent(aiContent.specificObservations),
       compromisos: parseAIContent(aiContent.actions),
+      inasistentes: inasistentes,
     };
   };
 
@@ -234,7 +303,6 @@ export default function ClientPage() {
                 resultsForPdf = {
                     ...lastResults,
                     R: { ...specificGroupData.results, TOTAL_FILAS: specificGroupData.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
-                    groupedData: [specificGroupData],
                 };
             } else {
                  throw new Error(`No se encontraron datos para ${targetIps} en ${targetMunicipio}`);
@@ -316,7 +384,6 @@ export default function ClientPage() {
             const resultsForPdf: DataProcessingResult = {
                 ...lastResults,
                 R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
-                groupedData: [group],
             };
 
             const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio);
@@ -519,58 +586,6 @@ export default function ClientPage() {
         })
     }, [lastResults]);
     
-    const inasistentesData = useMemo(() => {
-        if (!lastResults) return [];
-
-        const { rawRows, headerMap, R } = lastResults;
-        if (!R.FALTANTES_ENCABEZADOS.includes('FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA')) {
-
-            const range6m = {
-                start: new Date(yearForPdf, monthForPdf - 6, 1),
-                end: new Date(yearForPdf, monthForPdf, 0)
-            };
-
-            const inasistentes = rawRows.filter(row => {
-                const fpa_val = row[headerMap['fecha_pa_last']];
-                if (!fpa_val) return false;
-                
-                let fpa: Date | null = null;
-                if (typeof fpa_val === 'number') {
-                    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-                    fpa = new Date(excelEpoch.getTime() + (fpa_val - (fpa_val > 60 ? 1 : 0)) * 86400000);
-                } else if(fpa_val instanceof Date) {
-                    fpa = fpa_val;
-                } else if (typeof fpa_val === 'string') {
-                    const isoMatch = fpa_val.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                    if (isoMatch) {
-                       const [_, y, m, d] = isoMatch;
-                       fpa = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
-                    } else {
-                       const commonMatch = fpa_val.match(/^(?:(\d{1,2})[.\/-])?(\d{1,2})[.\/-](\d{2,4})$/);
-                       if(commonMatch) {
-                           let [_, p1, p2, p3] = commonMatch;
-                           let yearNum = Number(p3);
-                           if (p3.length <= 2) yearNum += 2000;
-                           if (Number(p1) > 0 && Number(p1) <= 31 && Number(p2) > 0 && Number(p2) <= 12) {
-                               fpa = new Date(Date.UTC(yearNum, Number(p2)-1, Number(p1)));
-                           } else if (Number(p2) > 0 && Number(p2) <= 31 && Number(p1) > 0 && Number(p1) <= 12) {
-                               fpa = new Date(Date.UTC(yearNum, Number(p1)-1, Number(p2)));
-                           }
-                       }
-                    }
-                }
-
-                if (fpa && fpa instanceof Date && !isNaN(fpa.getTime())) {
-                    const isInRange = fpa.getTime() >= range6m.start.getTime() && fpa.getTime() <= range6m.end.getTime();
-                    return !isInRange; 
-                }
-                return false;
-            });
-            return inasistentes;
-        }
-        return [];
-    }, [lastResults, yearForPdf, monthForPdf]);
-
 
   const kpiGroups = kpis ? [
     {
@@ -1033,50 +1048,6 @@ export default function ClientPage() {
                                      </Button>
                                 </div>
                             </div>
-                            
-                            <Accordion type="single" collapsible className="w-full">
-                                <AccordionItem value="item-1">
-                                    <AccordionTrigger>
-                                        Ver Tabla de Pacientes Inasistentes ({inasistentesData.length})
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className="max-h-96 overflow-y-auto">
-                                            <Table>
-                                                <TableHeader className="sticky top-0 bg-card">
-                                                     <TableRow>
-                                                        <TableHead>TI</TableHead>
-                                                        <TableHead>Identificación</TableHead>
-                                                        <TableHead>1er Nombre</TableHead>
-                                                        <TableHead>2do Nombre</TableHead>
-                                                        <TableHead>1er Apellido</TableHead>
-                                                        <TableHead>2do Apellido</TableHead>
-                                                        <TableHead>Teléfono</TableHead>
-                                                        <TableHead>Dirección</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                     {inasistentesData.length > 0 ? inasistentesData.map((row, index) => (
-                                                        <TableRow key={index}>
-                                                            <TableCell>{row[lastResults.headerMap['tipo_id']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['id']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['p_nombre']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['s_nombre']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['p_apellido']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['s_apellido']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['tel']] || ''}</TableCell>
-                                                            <TableCell>{row[lastResults.headerMap['dir']] || ''}</TableCell>
-                                                        </TableRow>
-                                                     )) : (
-                                                        <TableRow>
-                                                            <TableCell colSpan={8} className="text-center">No se encontraron pacientes inasistentes o faltan las columnas requeridas.</TableCell>
-                                                        </TableRow>
-                                                     )}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
                         </div>
                     </CardContent>
                 </Card>
@@ -1088,3 +1059,5 @@ export default function ClientPage() {
     </>
   );
 }
+
+    

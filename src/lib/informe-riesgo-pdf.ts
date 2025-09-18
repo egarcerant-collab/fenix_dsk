@@ -21,6 +21,7 @@ export interface InformeDatos {
   calidadDato: Texto[];
   observaciones: Texto[];
   compromisos: Texto[];
+  inasistentes?: Array<{ [key: string]: string }>;
 }
 
 export interface PdfImages {
@@ -62,7 +63,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
   const h = (t: string) => ({ text: t, style: "h1", margin: [0, 10, 0, 4] });
   const p = (t: Texto) => ({ text: t as any, style: "p", margin: [0, 0, 0, 4] });
 
-  const mainContent = [
+  let mainContent: any[] = [
       // Encabezado
       h("Encabezado"),
       {
@@ -123,6 +124,36 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
       { ul: data.compromisos.map((t) => ({ text: t, style: "p" })) },
     ];
 
+  if (data.inasistentes && data.inasistentes.length > 0) {
+    mainContent.push(
+      h("Listado de Pacientes Inasistentes a Control"),
+      {
+        table: {
+          headerRows: 1,
+          widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', '*', '*'],
+          body: [
+            [
+              { text: 'Tipo ID', style: 'tableHeader' },
+              { text: 'N° ID', style: 'tableHeader' },
+              { text: '1er Nombre', style: 'tableHeader' },
+              { text: '2do Nombre', style: 'tableHeader' },
+              { text: '1er Apellido', style: 'tableHeader' },
+              { text: '2do Apellido', style: 'tableHeader' },
+              { text: 'Teléfono', style: 'tableHeader' },
+              { text: 'Dirección', style: 'tableHeader' },
+            ],
+            ...data.inasistentes.map(p => [
+                p.tipo_id, p.id, p.p_nombre, p.s_nombre, p.p_apellido, p.s_apellido, p.tel, p.dir
+            ]),
+          ],
+        },
+        layout: 'lightHorizontalLines',
+        margin: [0, 0, 0, 8],
+        fontSize: 8,
+      }
+    );
+  }
+
 
   const docDefinition: any = {
     pageSize: "A4",
@@ -139,7 +170,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
       h2: { bold: true, fontSize: 12, margin: [0, 8, 0, 4] },
       p: { fontSize: 12 },
       small: { fontSize: 10 },
-      tableHeader: { bold: true, fontSize: 12 },
+      tableHeader: { bold: true, fontSize: 10, color: 'black' },
     },
     background: function(currentPage: number, pageSize: any) {
         if (!images?.background) return null;
@@ -176,3 +207,5 @@ export async function descargarInformePDF(
   const docDef = buildDocDefinition(datos, images);
   pdfMake.createPdf(docDef).download(nombre);
 }
+
+    
