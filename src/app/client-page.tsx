@@ -54,7 +54,7 @@ export default function ClientPage() {
   
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-1.5-pro-latest');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-1.5-flash-latest');
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
 
 
@@ -263,14 +263,23 @@ export default function ClientPage() {
 
     } catch (error: any) {
         console.error("Error generando el PDF:", error);
-        toast({ title: 'Error', description: error?.message || 'No se pudo generar el PDF con IA.', variant: 'destructive' });
+        if (error.message && error.message.includes('429')) {
+             toast({ 
+                title: 'Límite de cuota excedido', 
+                description: 'Ha realizado demasiadas solicitudes a la IA en poco tiempo. Por favor, espere un minuto y vuelva a intentarlo.', 
+                variant: 'destructive',
+                duration: 9000
+            });
+        } else {
+            toast({ title: 'Error al generar PDF con IA', description: error?.message || 'No se pudo generar el informe.', variant: 'destructive' });
+        }
     } finally {
         setIsGeneratingPdf(false);
     }
  };
 
 
-  const handleBulkGeneratePdf = async () => {
+ const handleBulkGeneratePdf = async () => {
     if (!lastResults) {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
