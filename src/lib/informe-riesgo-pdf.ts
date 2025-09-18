@@ -161,20 +161,16 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
       {
         table: {
           headerRows: 1,
-          widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', '*', '*'],
+          widths: ['auto', '*', '*', '*'],
           body: [
             [
               { text: 'Tipo ID', style: 'tableHeader' },
               { text: 'N° ID', style: 'tableHeader' },
-              { text: '1er Nombre', style: 'tableHeader' },
-              { text: '2do Nombre', style: 'tableHeader' },
-              { text: '1er Apellido', style: 'tableHeader' },
-              { text: '2do Apellido', style: 'tableHeader' },
               { text: 'Teléfono', style: 'tableHeader' },
               { text: 'Dirección', style: 'tableHeader' },
             ],
             ...data.inasistentes.map(p => [
-                p.tipo_id, p.id, p.p_nombre, p.s_nombre, p.p_apellido, p.s_apellido, p.tel, p.dir
+                p.tipo_id, p.id, p.tel, p.dir
             ]),
           ],
         },

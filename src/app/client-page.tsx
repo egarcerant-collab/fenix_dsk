@@ -209,10 +209,6 @@ export default function ClientPage() {
     }).map(row => ({
         tipo_id: row[headerMap['tipo_id']] || '',
         id: row[headerMap['id']] || '',
-        p_nombre: row[headerMap['p_nombre']] || '',
-        s_nombre: row[headerMap['s_nombre']] || '',
-        p_apellido: row[headerMap['p_apellido']] || '',
-        s_apellido: row[headerMap['s_apellido']] || '',
         tel: row[headerMap['tel']] || '',
         dir: row[headerMap['dir']] || '',
     }));
