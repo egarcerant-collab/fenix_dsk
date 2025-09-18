@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Script from 'next/script';
-import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
+import { DataProcessingResult, GroupedResult, KpiResults, HeaderMap } from '@/lib/data-processing';
 import { processSelectedFile, listFiles, listModels } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
@@ -518,6 +518,58 @@ export default function ClientPage() {
              }
         })
     }, [lastResults]);
+    
+    const inasistentesData = useMemo(() => {
+        if (!lastResults) return [];
+
+        const { rawRows, headerMap, R } = lastResults;
+        if (!R.FALTANTES_ENCABEZADOS.includes('FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA')) {
+
+            const range6m = {
+                start: new Date(yearForPdf, monthForPdf - 6, 1),
+                end: new Date(yearForPdf, monthForPdf, 0)
+            };
+
+            const inasistentes = rawRows.filter(row => {
+                const fpa_val = row[headerMap['fecha_pa_last']];
+                if (!fpa_val) return false;
+                
+                let fpa: Date | null = null;
+                if (typeof fpa_val === 'number') {
+                    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+                    fpa = new Date(excelEpoch.getTime() + (fpa_val - (fpa_val > 60 ? 1 : 0)) * 86400000);
+                } else if(fpa_val instanceof Date) {
+                    fpa = fpa_val;
+                } else if (typeof fpa_val === 'string') {
+                    const isoMatch = fpa_val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (isoMatch) {
+                       const [_, y, m, d] = isoMatch;
+                       fpa = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+                    } else {
+                       const commonMatch = fpa_val.match(/^(?:(\d{1,2})[.\/-])?(\d{1,2})[.\/-](\d{2,4})$/);
+                       if(commonMatch) {
+                           let [_, p1, p2, p3] = commonMatch;
+                           let yearNum = Number(p3);
+                           if (p3.length <= 2) yearNum += 2000;
+                           if (Number(p1) > 0 && Number(p1) <= 31 && Number(p2) > 0 && Number(p2) <= 12) {
+                               fpa = new Date(Date.UTC(yearNum, Number(p2)-1, Number(p1)));
+                           } else if (Number(p2) > 0 && Number(p2) <= 31 && Number(p1) > 0 && Number(p1) <= 12) {
+                               fpa = new Date(Date.UTC(yearNum, Number(p1)-1, Number(p2)));
+                           }
+                       }
+                    }
+                }
+
+                if (fpa && fpa instanceof Date && !isNaN(fpa.getTime())) {
+                    const isInRange = fpa.getTime() >= range6m.start.getTime() && fpa.getTime() <= range6m.end.getTime();
+                    return !isInRange; 
+                }
+                return false;
+            });
+            return inasistentes;
+        }
+        return [];
+    }, [lastResults, yearForPdf, monthForPdf]);
 
 
   const kpiGroups = kpis ? [
@@ -909,76 +961,122 @@ export default function ClientPage() {
                         <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid sm:flex sm:flex-wrap sm:items-center sm:gap-2">
-                             <Dialog open={isExportPreviewOpen} onOpenChange={setIsExportPreviewOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" disabled={isGeneratingPdf} className="mb-2 sm:mb-0 w-full sm:w-auto">
-                                        <Eye className="mr-2 h-4 w-4"/>
-                                        Exportar Excel
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Vista Previa de Exportación</DialogTitle>
-                                        <DialogDescription>
-                                            Esta es una vista previa de las primeras 5 filas de datos que se exportarán a Excel.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="max-h-[50vh] overflow-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>IPS</TableHead>
-                                                    <TableHead>Municipio</TableHead>
-                                                    <TableHead>Num. Creat.</TableHead>
-                                                    <TableHead>Den. Creat.</TableHead>
-                                                    <TableHead>% Creatinina</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {exportPreviewData.map((row, i) => (
-                                                    <TableRow key={i}>
-                                                        <TableCell>{row.ips}</TableCell>
-                                                        <TableCell>{row.municipio}</TableCell>
-                                                        <TableCell>{row.numerador}</TableCell>
-                                                        <TableCell>{row.denominador}</TableCell>
-                                                        <TableCell>{row.porcentaje}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsExportPreviewOpen(false)}>Cancelar</Button>
-                                        <Button onClick={exportResults}>
-                                            <FileDown className="mr-2 h-4 w-4"/>
-                                            Confirmar y Descargar
+                         <div className="grid gap-4">
+                            <div className="grid sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+                                 <Dialog open={isExportPreviewOpen} onOpenChange={setIsExportPreviewOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" disabled={isGeneratingPdf} className="mb-2 sm:mb-0 w-full sm:w-auto">
+                                            <Eye className="mr-2 h-4 w-4"/>
+                                            Exportar Excel
                                         </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Vista Previa de Exportación</DialogTitle>
+                                            <DialogDescription>
+                                                Esta es una vista previa de las primeras 5 filas de datos que se exportarán a Excel.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="max-h-[50vh] overflow-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>IPS</TableHead>
+                                                        <TableHead>Municipio</TableHead>
+                                                        <TableHead>Num. Creat.</TableHead>
+                                                        <TableHead>Den. Creat.</TableHead>
+                                                        <TableHead>% Creatinina</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {exportPreviewData.map((row, i) => (
+                                                        <TableRow key={i}>
+                                                            <TableCell>{row.ips}</TableCell>
+                                                            <TableCell>{row.municipio}</TableCell>
+                                                            <TableCell>{row.numerador}</TableCell>
+                                                            <TableCell>{row.denominador}</TableCell>
+                                                            <TableCell>{row.porcentaje}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setIsExportPreviewOpen(false)}>Cancelar</Button>
+                                            <Button onClick={exportResults}>
+                                                <FileDown className="mr-2 h-4 w-4"/>
+                                                Confirmar y Descargar
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
 
-                            <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
-                                <SelectTrigger className="w-full sm:w-[280px]">
-                                <SelectValue placeholder="Seleccionar IPS para PDF" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                <SelectItem value="all">Consolidado ({selectedDepartment === 'all' ? 'Todos' : selectedDepartment})</SelectItem>
-                                {uniqueIpsLocations.map(item => (
-                                    <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <div className="flex gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                                <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf} className="w-full">
-                                    {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
-                                    {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
-                                </Button>
-                                 <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
-                                    {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
-                                    {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
-                                 </Button>
+                                <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
+                                    <SelectTrigger className="w-full sm:w-[280px]">
+                                    <SelectValue placeholder="Seleccionar IPS para PDF" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    <SelectItem value="all">Consolidado ({selectedDepartment === 'all' ? 'Todos' : selectedDepartment})</SelectItem>
+                                    {uniqueIpsLocations.map(item => (
+                                        <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <div className="flex gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                                    <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf} className="w-full">
+                                        {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
+                                        {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
+                                    </Button>
+                                     <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
+                                        {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
+                                        {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
+                                     </Button>
+                                </div>
                             </div>
+                            
+                            <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="item-1">
+                                    <AccordionTrigger>
+                                        Ver Tabla de Pacientes Inasistentes ({inasistentesData.length})
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="max-h-96 overflow-y-auto">
+                                            <Table>
+                                                <TableHeader className="sticky top-0 bg-card">
+                                                     <TableRow>
+                                                        <TableHead>TI</TableHead>
+                                                        <TableHead>Identificación</TableHead>
+                                                        <TableHead>1er Nombre</TableHead>
+                                                        <TableHead>2do Nombre</TableHead>
+                                                        <TableHead>1er Apellido</TableHead>
+                                                        <TableHead>2do Apellido</TableHead>
+                                                        <TableHead>Teléfono</TableHead>
+                                                        <TableHead>Dirección</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                     {inasistentesData.length > 0 ? inasistentesData.map((row, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{row[lastResults.headerMap['tipo_id']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['id']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['p_nombre']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['s_nombre']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['p_apellido']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['s_apellido']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['tel']] || ''}</TableCell>
+                                                            <TableCell>{row[lastResults.headerMap['dir']] || ''}</TableCell>
+                                                        </TableRow>
+                                                     )) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={8} className="text-center">No se encontraron pacientes inasistentes o faltan las columnas requeridas.</TableCell>
+                                                        </TableRow>
+                                                     )}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         </div>
                     </CardContent>
                 </Card>

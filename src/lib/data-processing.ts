@@ -1,6 +1,5 @@
 
 
-
 import { computeAllKpisForRow, KpiInput, KpiResults } from '@/lib/kpi-calculators';
 import { getPopulationMap, PopulationData } from '@/lib/population';
 import * as xlsx from 'xlsx';
@@ -47,6 +46,16 @@ const EXPECTED: { [key: string]: string[] } = {
     fecha_creatinina: ['FECHA CREATININA SANGRE', 'FECHA CREATININA  SANGRE', 'FECHA CREATININA SANGRE (MG/DL)'],
     fecha_albuminuria: ['FECHA ALBUMINURIA'],
     estadio_tfg: ['ESTADIO  SEGÚN TFG', 'ESTADIO SEGÚN TFG'],
+    
+    // Columns for Inasistentes table
+    tipo_id: ['TIPO ID'],
+    id: ['NUMERO DE IDENTIFICACION', 'NUMERO DE IDENTIFICACIÓN'],
+    p_nombre: ['PRIMER NOMBRE'],
+    s_nombre: ['SEGUNDO NOMBRE'],
+    p_apellido: ['PRIMER APELLIDO'],
+    s_apellido: ['SEGUNDO APELLIDO'],
+    tel: ['NUMERO DE TELEFONO'],
+    dir: ['DIRECCION', 'DIRECCIÓN DE RESIDENCIA'],
 };
 
 
