@@ -218,19 +218,24 @@ export default function ClientPage() {
     resultsForPdf: DataProcessingResult,
     aiContent: AIContent,
     targetIps: string | undefined,
-    targetMunicipio: string | undefined
+    targetMunicipio: string | undefined,
+    includeInasistentes: boolean
   ): InformeDatos => {
     const { R: kpis, rawRows, headerMap } = resultsForPdf;
     const analysisDate = new Date();
     
-    let relevantRows = rawRows;
-    if (targetIps && targetMunicipio) {
-        relevantRows = rawRows.filter(row => 
-            (row[headerMap['ips']] || '').toUpperCase().trim() === targetIps &&
-            (row[headerMap['municipio']] || '').toUpperCase().trim() === targetMunicipio
-        );
+    let inasistentes: InformeDatos['inasistentes'] = [];
+    if (includeInasistentes) {
+        let relevantRows = rawRows;
+        if (targetIps && targetMunicipio) {
+            relevantRows = rawRows.filter(row => 
+                (row[headerMap['ips']] || '').toUpperCase().trim() === targetIps &&
+                (row[headerMap['municipio']] || '').toUpperCase().trim() === targetMunicipio
+            );
+        }
+        inasistentes = getInasistentesData(relevantRows, headerMap);
     }
-    const inasistentes = getInasistentesData(relevantRows, headerMap);
+
 
     return {
       encabezado: {
@@ -325,7 +330,7 @@ export default function ClientPage() {
             model: selectedModel,
         });
         
-        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio);
+        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, false);
         
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
         
@@ -390,7 +395,7 @@ export default function ClientPage() {
                 R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
             };
 
-            const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio);
+            const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio, true);
             
             const docDefinition = buildDocDefinition(reportData, images);
 
