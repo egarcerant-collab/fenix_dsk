@@ -261,9 +261,9 @@ export default function ClientPage() {
         
         await descargarInformePDF(datosInforme, images);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generando el PDF:", error);
-        toast({ title: 'Error', description: 'No se pudo generar el PDF con IA.', variant: 'destructive' });
+        toast({ title: 'Error', description: error?.message || 'No se pudo generar el PDF con IA.', variant: 'destructive' });
     } finally {
         setIsGeneratingPdf(false);
     }
@@ -337,9 +337,9 @@ export default function ClientPage() {
 
         toast({ title: 'Éxito', description: 'La descarga del archivo ZIP ha comenzado.' });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generando el ZIP de PDFs:", error);
-        toast({ title: 'Error', description: 'No se pudo generar el archivo ZIP.', variant: 'destructive' });
+        toast({ title: 'Error', description: error?.message || 'No se pudo generar el archivo ZIP.', variant: 'destructive' });
     } finally {
         setIsGeneratingPdf(false);
     }
