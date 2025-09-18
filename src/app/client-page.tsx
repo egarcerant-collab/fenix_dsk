@@ -535,7 +535,7 @@ export default function ClientPage() {
       title: 'Resultado Tamizaje Creatinina',
       cards: [
         { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
-        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATINina', description: 'Total de registros con fecha de creatinina.' },
+        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
         { 
           label: 'Resultado Creatinina', 
           key: 'RESULTADO_CREATININA',
@@ -916,6 +916,8 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
 
     
 
