@@ -41,6 +41,8 @@ export default function ClientPage() {
   const [lastResults, setLastResults] = useState<DataProcessingResult | null>(null);
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedMunicipio, setSelectedMunicipio] = useState<string>('all');
+
   const [yearForPdf, setYearForPdf] = useState<number>(new Date().getFullYear());
   const [monthForPdf, setMonthForPdf] = useState<number>(new Date().getMonth() + 1);
 
@@ -108,6 +110,7 @@ export default function ClientPage() {
     action.then(results => {
       setLastResults(results);
       setSelectedDepartment('all');
+      setSelectedMunicipio('all');
       setStatus('Completado.');
       setProgress(100);
       toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
@@ -421,22 +424,33 @@ export default function ClientPage() {
     return `${(value * 100).toFixed(1)}%`;
   }
 
-  const { departments, filteredGroupedData } = useMemo(() => {
-    if (!lastResults) return { departments: [], filteredGroupedData: [] };
+  const { departments, municipios, filteredGroupedData } = useMemo(() => {
+    if (!lastResults) return { departments: [], municipios: [], filteredGroupedData: [] };
+    
     const departments = [...new Set(lastResults.groupedData.map(g => g.keys.dpto))].sort();
     
-    const filtered = selectedDepartment === 'all' 
+    const byDepartment = selectedDepartment === 'all' 
       ? lastResults.groupedData
       : lastResults.groupedData.filter(g => g.keys.dpto === selectedDepartment);
       
-    return { departments, filteredGroupedData: filtered };
-  }, [lastResults, selectedDepartment]);
+    const municipios = [...new Set(byDepartment.map(g => g.keys.municipio))].sort();
+
+    const byMunicipio = selectedMunicipio === 'all'
+      ? byDepartment
+      : byDepartment.filter(g => g.keys.municipio === selectedMunicipio);
+      
+    return { departments, municipios, filteredGroupedData: byMunicipio };
+  }, [lastResults, selectedDepartment, selectedMunicipio]);
+
+  useEffect(() => {
+    setSelectedMunicipio('all');
+  }, [selectedDepartment]);
 
 
   const kpis = useMemo(() => {
     if (!lastResults) return null;
     
-    if (selectedDepartment === 'all') {
+    if (selectedDepartment === 'all' && selectedMunicipio === 'all') {
         return lastResults.R;
     }
 
@@ -457,7 +471,7 @@ export default function ClientPage() {
         return acc;
     }, initialKpis as any);
 
-  }, [lastResults, filteredGroupedData, selectedDepartment]);
+  }, [lastResults, filteredGroupedData, selectedDepartment, selectedMunicipio]);
   
   const handleClearResults = () => {
     setLastResults(null);
@@ -689,7 +703,7 @@ export default function ClientPage() {
             <AccordionItem value="item-1">
               <AccordionTrigger>Verificar y Seleccionar Modelo de IA</AccordionTrigger>
               <AccordionContent>
-                 <div className="space-y-4">
+                 <div className="space-y-4 p-2">
                     <div className="space-y-1">
                       <h3 className="font-semibold">Modelos de IA</h3>
                       <p className="text-sm text-muted-foreground">
@@ -731,20 +745,31 @@ export default function ClientPage() {
           {lastResults && kpis && (
              <div className="grid gap-8">
                 <Card>
-                    <CardHeader className="flex-row items-center justify-between">
+                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
-                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : selectedDepartment})</CardTitle>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}`})</CardTitle>
                             <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
                         </div>
-                        <div className="w-[200px]">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Seleccionar Depto." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos los Departamentos</SelectItem>
                                     {departments.map(dpto => (
                                         <SelectItem key={dpto} value={dpto}>{dpto}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                             <Select value={selectedMunicipio} onValueChange={setSelectedMunicipio} disabled={selectedDepartment === 'all'}>
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Seleccionar Municipio" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Municipios</SelectItem>
+                                    {municipios.map(muni => (
+                                        <SelectItem key={muni} value={muni}>{muni}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
