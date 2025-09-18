@@ -22,6 +22,14 @@ export interface InformeDatos {
   observaciones: Texto[];
   compromisos: Texto[];
   inasistentes?: Array<{ [key: string]: string }>;
+  kpisTFG?: {
+    TFG_E1: number;
+    TFG_E2: number;
+    TFG_E3: number;
+    TFG_E4: number;
+    TFG_E5: number;
+    TFG_TOTAL: number;
+  };
 }
 
 export interface PdfImages {
@@ -123,6 +131,29 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
       h("Compromisos y acciones"),
       { ul: data.compromisos.map((t) => ({ text: t, style: "p" })) },
     ];
+    
+    if (data.kpisTFG) {
+    mainContent.push(
+      h("Resultados TFG por Estadio"),
+      {
+        table: {
+          headerRows: 1,
+          widths: ['*', 'auto'],
+          body: [
+            [{ text: "Estadio", style: "tableHeader" }, { text: "N° Pacientes", style: "tableHeader" }],
+            ["Estadio 1 (TFG >= 90)", data.kpisTFG.TFG_E1],
+            ["Estadio 2 (TFG 60-89)", data.kpisTFG.TFG_E2],
+            ["Estadio 3 (TFG 30-59)", data.kpisTFG.TFG_E3],
+            ["Estadio 4 (TFG 15-29)", data.kpisTFG.TFG_E4],
+            ["Estadio 5 (TFG < 15)", data.kpisTFG.TFG_E5],
+            [{text: "Total con Estadio Informado", bold: true}, {text: data.kpisTFG.TFG_TOTAL, bold: true}],
+          ],
+        },
+        layout: 'lightHorizontalLines',
+        margin: [0, 0, 0, 8],
+      }
+    );
+  }
 
   if (data.inasistentes && data.inasistentes.length > 0) {
     mainContent.push(

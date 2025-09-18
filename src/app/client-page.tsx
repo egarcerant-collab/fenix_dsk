@@ -260,6 +260,14 @@ export default function ClientPage() {
       observaciones: parseAIContent(aiContent.specificObservations),
       compromisos: parseAIContent(aiContent.actions),
       inasistentes: inasistentes,
+      kpisTFG: {
+          TFG_E1: kpis.TFG_E1,
+          TFG_E2: kpis.TFG_E2,
+          TFG_E3: kpis.TFG_E3,
+          TFG_E4: kpis.TFG_E4,
+          TFG_E5: kpis.TFG_E5,
+          TFG_TOTAL: kpis.TFG_TOTAL,
+      }
     };
   };
 
