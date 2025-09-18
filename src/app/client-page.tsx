@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw, Trash2, Cpu } from 'lucide-react';
+import { FileUp, FileDown, Loader2, FlaskConical, FileText, Files, RefreshCw, Trash2, Cpu, Eye } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults } from '@/lib/data-processing';
 import { processSelectedFile, listFiles, listModels } from '@/ai/actions';
@@ -53,6 +55,7 @@ export default function ClientPage() {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('gemini-1.5-pro-latest');
+  const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
 
 
   const fetchFiles = useCallback(() => {
@@ -366,6 +369,7 @@ export default function ClientPage() {
         const resultadoMenores = g.results.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? g.results.NUMERADOR_HTA_MENORES / g.results.DENOMINADOR_HTA_MENORES_ARCHIVO : 0;
         const resultadoMayores = g.results.DENOMINADOR_HTA_MAYORES > 0 ? g.results.NUMERADOR_HTA_MAYORES / g.results.DENOMINADOR_HTA_MAYORES : 0;
         const resultadoDM = denominadorDM > 0 ? g.results.NUMERADOR_DM_CONTROLADOS / denominadorDM : 0;
+        const resultadoCreatinina = g.results.DENOMINADOR_CREATININA > 0 ? g.results.NUMERADOR_CREATININA / g.results.DENOMINADOR_CREATININA : 0;
 
         return {
             'DEPARTAMENTO DE RESIDENCIA': g.keys.dpto,
@@ -388,6 +392,7 @@ export default function ClientPage() {
             '%_DM_CONTROLADOS': resultadoDM,
             'NUMERADOR_CREATININA': g.results.NUMERADOR_CREATININA,
             'DENOMINADOR_CREATININA': g.results.DENOMINADOR_CREATININA,
+            '%_CREATININA': resultadoCreatinina,
         };
     });
 
@@ -416,6 +421,7 @@ export default function ClientPage() {
     const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'resultados_indicadores.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    setIsExportPreviewOpen(false);
   }
 
   const formatPercent = (value: number) => {
@@ -465,7 +471,7 @@ export default function ClientPage() {
     return filteredGroupedData.reduce((acc, group) => {
         Object.keys(group.results).forEach(keyStr => {
             const key = keyStr as keyof KpiResults;
-            (acc as any)[key] += group.results[key] || 0;
+            (acc as any)[key] = ((acc as any)[key] || 0) + (group.results[key] || 0);
         });
         acc.TOTAL_FILAS += group.rowCount;
         return acc;
@@ -489,6 +495,21 @@ export default function ClientPage() {
         })
         .finally(() => setIsFetchingModels(false));
   }
+  
+    const exportPreviewData = useMemo(() => {
+        if (!lastResults) return [];
+        return lastResults.groupedData.slice(0, 5).map(g => {
+             const resultadoCreatinina = g.results.DENOMINADOR_CREATININA > 0 ? g.results.NUMERADOR_CREATININA / g.results.DENOMINADOR_CREATININA : 0;
+             return {
+                ips: g.keys.ips,
+                municipio: g.keys.municipio,
+                numerador: g.results.NUMERADOR_CREATININA,
+                denominador: g.results.DENOMINADOR_CREATININA,
+                porcentaje: formatPercent(resultadoCreatinina),
+             }
+        })
+    }, [lastResults]);
+
 
   const kpiGroups = kpis ? [
     {
@@ -879,11 +900,55 @@ export default function ClientPage() {
                         <CardDescription>Calidad de datos, exportación a Excel y generación de informes en PDF.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <div className="grid sm:flex sm:flex-wrap sm:items-center sm:gap-2">
-                            <Button onClick={exportResults} variant="outline" disabled={isGeneratingPdf} className="mb-2 sm:mb-0 w-full sm:w-auto">
-                                <FileDown className="mr-2 h-4 w-4"/>
-                                Exportar Excel
-                            </Button>
+                        <div className="grid sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+                             <Dialog open={isExportPreviewOpen} onOpenChange={setIsExportPreviewOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" disabled={isGeneratingPdf} className="mb-2 sm:mb-0 w-full sm:w-auto">
+                                        <Eye className="mr-2 h-4 w-4"/>
+                                        Exportar Excel
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Vista Previa de Exportación</DialogTitle>
+                                        <DialogDescription>
+                                            Esta es una vista previa de las primeras 5 filas de datos que se exportarán a Excel.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="max-h-[50vh] overflow-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>IPS</TableHead>
+                                                    <TableHead>Municipio</TableHead>
+                                                    <TableHead>Num. Creat.</TableHead>
+                                                    <TableHead>Den. Creat.</TableHead>
+                                                    <TableHead>% Creatinina</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {exportPreviewData.map((row, i) => (
+                                                    <TableRow key={i}>
+                                                        <TableCell>{row.ips}</TableCell>
+                                                        <TableCell>{row.municipio}</TableCell>
+                                                        <TableCell>{row.numerador}</TableCell>
+                                                        <TableCell>{row.denominador}</TableCell>
+                                                        <TableCell>{row.porcentaje}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsExportPreviewOpen(false)}>Cancelar</Button>
+                                        <Button onClick={exportResults}>
+                                            <FileDown className="mr-2 h-4 w-4"/>
+                                            Confirmar y Descargar
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+
                             <Select value={selectedIpsForPdf} onValueChange={setSelectedIpsForPdf} disabled={isGeneratingPdf}>
                                 <SelectTrigger className="w-full sm:w-[280px]">
                                 <SelectValue placeholder="Seleccionar IPS para PDF" />
@@ -916,11 +981,3 @@ export default function ClientPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
-
-    
