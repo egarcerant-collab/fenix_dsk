@@ -312,6 +312,8 @@ export default function ClientPage() {
                 resultsForPdf = {
                     ...lastResults,
                     R: { ...specificGroupData.results, TOTAL_FILAS: specificGroupData.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
+                    rawRows: lastResults.rawRows, // Asegúrate de pasar las filas crudas para los inasistentes
+                    headerMap: lastResults.headerMap
                 };
             } else {
                  throw new Error(`No se encontraron datos para ${targetIps} en ${targetMunicipio}`);
@@ -330,7 +332,7 @@ export default function ClientPage() {
             model: selectedModel,
         });
         
-        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, false);
+        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, false); // false: no incluir inasistentes
         
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
         
@@ -396,13 +398,15 @@ export default function ClientPage() {
             toast({ title: `Generando: ${ips} - ${municipio}`, description: 'Por favor, espere...' });
             
             // 3.a. Aislamiento de los datos del grupo actual.
-            const resultsForPdf: DataProcessingResult = {
+             const resultsForPdf: DataProcessingResult = {
                 ...lastResults,
                 R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
+                rawRows: lastResults.rawRows, // Asegúrate de pasar las filas crudas para los inasistentes
+                headerMap: lastResults.headerMap
             };
 
             // 3.b. Construcción del objeto de datos para el PDF, incluyendo la lista de inasistentes.
-            const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio, true);
+            const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio, true); // true: incluir inasistentes
             
             // 3.c. Creación de la estructura del documento PDF.
             const docDefinition = buildDocDefinition(reportData, images);
@@ -864,7 +868,7 @@ export default function ClientPage() {
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
-                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `{selectedDepartment}{selectedMunicipio === 'all' ? '' : ` - {selectedMunicipio}`}`})</CardTitle>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}`})</CardTitle>
                             <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
