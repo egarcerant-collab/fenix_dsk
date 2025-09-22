@@ -357,6 +357,7 @@ export default function ClientPage() {
 
 
  const handleBulkGeneratePdf = async () => {
+    // 1. Verificación Inicial
     if (!lastResults) {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
@@ -364,9 +365,11 @@ export default function ClientPage() {
     setIsGeneratingPdf(true);
     toast({ title: 'Generando PDFs Masivos...', description: 'Esto puede tardar varios minutos. No cierre la ventana.' });
 
+    // 2. Preparación del Entorno
     const zip = new JSZip();
     const monthName = new Date(yearForPdf, monthForPdf - 1).toLocaleString('es', { month: 'long' });
 
+    // 2.a. Contenido simulado para la IA, evitando llamadas a la API en cada PDF.
     const mockAiContent: AIContent = {
         reference: "<p>Análisis de indicadores de gestión del riesgo, sin redacción de IA.</p>",
         summary: "<p>Análisis pendiente. Revisar datos para conclusiones.</p>",
@@ -375,40 +378,47 @@ export default function ClientPage() {
         actions: "<p>Compromisos y acciones por definir.</p>",
     };
     
+    // 2.b. Inicialización de pdfmake una sola vez para mejorar el rendimiento.
     const pdfMake = (await import("pdfmake/build/pdfmake")).default;
     const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
     pdfMake.vfs = pdfFonts;
     
     try {
+        // 2.c. Carga de la imagen de fondo una sola vez.
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
-      
         const images: PdfImages = { background: backgroundImg };
       
         const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
 
+        // 3. Iteración por cada Grupo (IPS y Municipio)
         for (const group of uniqueGroups) {
             const { ips, municipio } = group.keys;
             toast({ title: `Generando: ${ips} - ${municipio}`, description: 'Por favor, espere...' });
             
+            // 3.a. Aislamiento de los datos del grupo actual.
             const resultsForPdf: DataProcessingResult = {
                 ...lastResults,
                 R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
             };
 
+            // 3.b. Construcción del objeto de datos para el PDF, incluyendo la lista de inasistentes.
             const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio, true);
             
+            // 3.c. Creación de la estructura del documento PDF.
             const docDefinition = buildDocDefinition(reportData, images);
 
+            // 3.d. Creación del PDF en memoria como un Blob.
             const pdfDoc = pdfMake.createPdf(docDefinition);
-
             const pdfBlob = await new Promise<Blob>((resolve) => {
                 pdfDoc.getBlob((blob) => resolve(blob));
             });
 
+            // 3.e. Adición del PDF al archivo ZIP.
             const fileName = `Informe_${ips.replace(/\s/g, '_')}_${municipio.replace(/\s/g, '_')}.pdf`;
             zip.file(fileName, pdfBlob);
         }
 
+        // 4. Finalización y Descarga del ZIP
         toast({ title: 'Comprimiendo archivos...', description: 'Preparando la descarga del archivo ZIP.' });
         const zipBlob = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(zipBlob);
@@ -608,19 +618,19 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Resultado HTA < 60 años',
+      title: 'Resultado HTA &lt; 60 años',
       cards: [
-        { label: 'HTA Controlado <60 (Numerador)', key: 'NUMERADOR_HTA_MENORES', description: 'Pacientes HTA (18-59a) con PA < 140/90.' },
-        { label: 'Población HTA <60 (Denominador)', key: 'DENOMINADOR_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
-        { label: 'Resultado HTA <60', key: 'RESULTADO_HTA_MENORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? kpis.NUMERADOR_HTA_MENORES / kpis.DENOMINADOR_HTA_MENORES_ARCHIVO : 0), description: '(Numerador / Denominador)' },
+        { label: 'HTA Controlado &lt;60 (Numerador)', key: 'NUMERADOR_HTA_MENORES', description: 'Pacientes HTA (18-59a) con PA &lt; 140/90.' },
+        { label: 'Población HTA &lt;60 (Denominador)', key: 'DENOMINADOR_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
+        { label: 'Resultado HTA &lt;60', key: 'RESULTADO_HTA_MENORES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MENORES_ARCHIVO > 0 ? kpis.NUMERADOR_HTA_MENORES / kpis.DENOMINADOR_HTA_MENORES_ARCHIVO : 0), description: '(Numerador / Denominador)' },
       ]
     },
     {
-      title: 'Resultado HTA >= 60 años',
+      title: 'Resultado HTA &gt;= 60 años',
       cards: [
-        { label: 'HTA Controlado >=60 (Numerador)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (>=60a, sin DM) con PA < 150/90.' },
-        { label: 'Población HTA >=60 (Denominador)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (>=60a, sin DM) del archivo cargado.' },
-        { label: 'Resultado HTA >=60', key: 'RESULTADO_HTA_MAORIES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador / Denominador)' },
+        { label: 'HTA Controlado &gt;=60 (Numerador)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (&gt;=60a, sin DM) con PA &lt; 150/90.' },
+        { label: 'Población HTA &gt;=60 (Denominador)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (&gt;=60a, sin DM) del archivo cargado.' },
+        { label: 'Resultado HTA &gt;=60', key: 'RESULTADO_HTA_MAORIES', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_HTA_MAYORES > 0 ? kpis.NUMERADOR_HTA_MAYORES / kpis.DENOMINADOR_HTA_MAYORES : 0), description: '(Numerador / Denominador)' },
       ]
     },
      {
@@ -634,7 +644,7 @@ export default function ClientPage() {
     {
       title: 'Resultado Control DM (HbA1c)',
       cards: [
-        { label: 'DM Controlado (Numerador)', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c < 7%.' },
+        { label: 'DM Controlado (Numerador)', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c &lt; 7%.' },
         { label: 'Pacientes con DM (Denominador)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
         { label: 'Resultado Control DM', key: 'RESULTADO_DM_CONTROL', isPercentage: true, value: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_DM_CONTROLADOS / kpis.DENOMINADOR_DM_CONTROLADOS : 0), description: '(Numerador / Denominador)' },
       ]
@@ -643,7 +653,7 @@ export default function ClientPage() {
       title: 'Resultado Tamizaje Creatinina',
       cards: [
         { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
-        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
+        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATINina', description: 'Total de registros con fecha de creatinina.' },
         { 
           label: 'Resultado Creatinina', 
           key: 'RESULTADO_CREATININA',
@@ -675,11 +685,11 @@ export default function ClientPage() {
   ] : [];
 
   const tfgKpis = kpis ? [
-    { label: 'Estadio 1', key: 'TFG_E1', description: 'Pacientes en Estadio 1 (TFG >= 90)' },
+    { label: 'Estadio 1', key: 'TFG_E1', description: 'Pacientes en Estadio 1 (TFG &gt;= 90)' },
     { label: 'Estadio 2', key: 'TFG_E2', description: 'Pacientes en Estadio 2 (TFG 60-89)' },
     { label: 'Estadio 3', key: 'TFG_E3', description: 'Pacientes en Estadio 3 (TFG 30-59)' },
     { label: 'Estadio 4', key: 'TFG_E4', description: 'Pacientes en Estadio 4 (TFG 15-29)' },
-    { label: 'Estadio 5', key: 'TFG_E5', description: 'Pacientes en Estadio 5 (TFG < 15)' },
+    { label: 'Estadio 5', key: 'TFG_E5', description: 'Pacientes en Estadio 5 (TFG &lt; 15)' },
     { label: 'Total con Estadio', key: 'TFG_TOTAL', description: 'Total pacientes con estadio TFG informado.' },
   ] : [];
 
@@ -688,8 +698,8 @@ export default function ClientPage() {
 
   const chartDataHTA = kpis ? [
     { name: 'HTA General', Numerador: kpis.NUMERADOR_HTA, Denominador: kpis.DENOMINADOR_HTA_MENORES },
-    { name: 'HTA <60', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
-    { name: 'HTA >=60', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
+    { name: 'HTA &lt;60', Numerador: kpis.NUMERADOR_HTA_MENORES, Denominador: kpis.DENOMINADOR_HTA_MENORES_ARCHIVO },
+    { name: 'HTA &gt;=60', Numerador: kpis.NUMERADOR_HTA_MAYORES, Denominador: kpis.DENOMINADOR_HTA_MAYORES },
   ] : [];
 
   const chartDataDM = kpis ? [
@@ -782,8 +792,7 @@ export default function ClientPage() {
                 <div className="flex gap-2 justify-self-end self-end w-full">
                   <Button onClick={handleProcess} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isProcessing || !selectedFile}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-                    {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
-                  </Button>
+                    {isProcessing ? 'Procesando...' : 'Procesar Archivo'}</Button>
                    <Button onClick={fetchFiles} variant="outline" size="icon" className="flex-shrink-0" disabled={isRefreshing}>
                         {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         <span className="sr-only">Actualizar lista</span>
@@ -855,7 +864,7 @@ export default function ClientPage() {
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
-                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}`})</CardTitle>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `{selectedDepartment}{selectedMunicipio === 'all' ? '' : ` - {selectedMunicipio}`}`})</CardTitle>
                             <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -886,7 +895,7 @@ export default function ClientPage() {
                     <CardContent className="flex flex-col gap-8">
                         {kpiGroups.map((group, index) => (
                           <div key={index} className="space-y-4">
-                            <h3 className="font-semibold text-card-foreground">{group.title}</h3>
+                            <h3 className="font-semibold text-card-foreground" dangerouslySetInnerHTML={{ __html: group.title }}></h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {group.cards.map(({ label, key, description, isPercentage, value }) => (
                                     <Card key={key || label} className="p-4 text-center flex flex-col justify-between hover:bg-card-foreground/5 transition-colors">
@@ -1051,12 +1060,10 @@ export default function ClientPage() {
                                 <div className="flex gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
                                     <Button onClick={handleGeneratePdf} variant="default" disabled={isGeneratingPdf} className="w-full">
                                         {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4"/>}
-                                        {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}
-                                    </Button>
+                                        {isGeneratingPdf ? 'Generando...' : 'Generar PDF'}</Button>
                                      <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
                                         {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
-                                        {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}
-                                     </Button>
+                                        {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}</Button>
                                 </div>
                             </div>
                         </div>
