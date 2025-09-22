@@ -1,5 +1,3 @@
-
-
 // src/lib/informe-riesgo-pdf.ts
 // Genera un PDF con el esquema solicitado usando pdfmake.
 // A4, cuerpo 12 pt, títulos en negrilla. Si registras Arial, la usará;
@@ -157,7 +155,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
 
   if (data.inasistentes && data.inasistentes.length > 0) {
     mainContent.push(
-      h("Listado de Pacientes Inasistentes a Control"),
+      { text: "Listado de Pacientes Inasistentes a Control", style: "h1", margin: [0, 10, 0, 4], pageBreak: "before" },
       {
         table: {
           headerRows: 1,
@@ -234,5 +232,3 @@ export async function descargarInformePDF(
   const docDef = buildDocDefinition(datos, images);
   pdfMake.createPdf(docDef).download(nombre);
 }
-
-    

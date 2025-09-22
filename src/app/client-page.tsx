@@ -102,7 +102,7 @@ export default function ClientPage() {
     } else if (filteredFiles.length === 0) {
       setSelectedFile('');
     }
-  }, [selectedYear, filteredFiles, selectedFile]);
+  }, [filteredFiles, selectedFile]);
 
 
  const startProcessing = (action: Promise<DataProcessingResult>) => {
@@ -158,11 +158,11 @@ export default function ClientPage() {
     startProcessing(processSelectedFile(selectedFile, year, month));
   };
 
-  const getInasistentesData = (
+  const getInasistentesData = useCallback((
     relevantRows: any[][],
     headerMap: HeaderMap
   ) => {
-    if (!lastResults || lastResults.R.FALTANTES_ENCABEZADOS.includes('FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA')) {
+    if (lastResults?.R.FALTANTES_ENCABEZADOS.includes('FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA')) {
         return [];
     }
 
@@ -212,9 +212,9 @@ export default function ClientPage() {
         tel: row[headerMap['tel']] || '',
         dir: row[headerMap['dir']] || '',
     }));
-  };
+  }, [yearForPdf, monthForPdf, lastResults?.R.FALTANTES_ENCABEZADOS]);
 
- const mapToInformeDatos = (
+ const mapToInformeDatos = useCallback((
     resultsForPdf: DataProcessingResult,
     aiContent: AIContent,
     targetIps: string | undefined,
@@ -270,7 +270,7 @@ export default function ClientPage() {
           TFG_TOTAL: kpis.TFG_TOTAL,
       }
     };
-  };
+  }, [getInasistentesData, yearForPdf]);
 
   const parseAIContent = (content: string): any[] => {
         if (!content) return [];
@@ -534,7 +534,9 @@ export default function ClientPage() {
   }, [lastResults, selectedDepartment, selectedMunicipio]);
 
   useEffect(() => {
-    setSelectedMunicipio('all');
+    if(selectedDepartment === 'all') {
+      setSelectedMunicipio('all');
+    }
   }, [selectedDepartment]);
 
 
@@ -1068,9 +1070,3 @@ export default function ClientPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
