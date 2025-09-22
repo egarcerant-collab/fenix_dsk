@@ -332,11 +332,11 @@ export default function ClientPage() {
             model: selectedModel,
         });
         
-        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, false); // false: no incluir inasistentes
-        
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
         
         const images: PdfImages = { background: backgroundImg };
+        
+        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, false);
         
         await descargarInformePDF(datosInforme, images);
 
@@ -868,7 +868,7 @@ export default function ClientPage() {
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
-                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}`})</CardTitle>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `{selectedDepartment}{selectedMunicipio === 'all' ? '' : ` - {selectedMunicipio}`} }`})</CardTitle>
                             <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
