@@ -7,13 +7,14 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { ReportRequestSchema, AIContentSchema, ReportRequest } from '../schemas';
+import { ReportRequestSchema, AIContentSchema } from '../schemas';
 import { googleAI } from '@genkit-ai/google-genai';
 
 const ReportWithModelRequestSchema = ReportRequestSchema.extend({
     model: z.string().describe("The AI model to use for generation."),
 });
-type ReportWithModelRequest = z.infer<typeof ReportWithModelRequestSchema>;
+
+export type ReportWithModelRequest = z.infer<typeof ReportWithModelRequestSchema>;
 
 
 export async function generateReportText(input: ReportWithModelRequest): Promise<z.infer<typeof AIContentSchema>> {
@@ -85,8 +86,11 @@ const reportGenerationFlow = ai.defineFlow(
     inputSchema: ReportWithModelRequestSchema,
     outputSchema: AIContentSchema,
   },
-  async ({model, ...input}) => {
-    const { output } = await reportGenerationPrompt(input, { model: googleAI.model(model) });
+  async (input) => {
+    const { model, ...promptInput } = input;
+    
+    const { output } = await reportGenerationPrompt(promptInput, { model: googleAI.model(model) });
+    
     if (!output) {
       throw new Error("AI failed to generate report content.");
     }
