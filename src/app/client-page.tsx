@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults, HeaderMap } from '@/lib/data-processing';
-import { processSelectedFile, listFiles, listModels } from '@/ai/actions';
+import { processSelectedFile, listFiles } from '@/ai/actions';
 import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -52,9 +52,6 @@ export default function ClientPage() {
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [isFetchingModels, setIsFetchingModels] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-1.5-flash-latest');
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
 
 
@@ -209,6 +206,10 @@ export default function ClientPage() {
     }).map(row => ({
         tipo_id: row[headerMap['tipo_id']] || '',
         id: row[headerMap['id']] || '',
+        p_nombre: row[headerMap['p_nombre']] || '',
+        s_nombre: row[headerMap['s_nombre']] || '',
+        p_apellido: row[headerMap['p_apellido']] || '',
+        s_apellido: row[headerMap['s_apellido']] || '',
         tel: row[headerMap['tel']] || '',
         dir: row[headerMap['dir']] || '',
     }));
@@ -285,10 +286,7 @@ export default function ClientPage() {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
     }
-    if (!selectedModel) {
-      toast({ title: 'Error', description: 'Por favor, seleccione un modelo de IA antes de generar el PDF.', variant: 'destructive' });
-      return;
-    }
+    
     setIsGeneratingPdf(true);
     toast({ title: 'Generando PDF con IA...', description: 'Redactando análisis, esto puede tardar un momento.' });
 
@@ -329,7 +327,7 @@ export default function ClientPage() {
                 month: monthForPdf,
                 monthName: monthName
             },
-            model: selectedModel,
+            model: 'gemini-1.5-flash-latest',
         });
         
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
@@ -586,17 +584,6 @@ export default function ClientPage() {
     setProgress(0);
   };
   
-  const handleFetchModels = () => {
-    setIsFetchingModels(true);
-    listModels()
-        .then(setAvailableModels)
-        .catch(err => {
-            console.error("Failed to list models:", err);
-            toast({ title: 'Error', description: 'No se pudo cargar la lista de modelos de IA.', variant: 'destructive' });
-        })
-        .finally(() => setIsFetchingModels(false));
-  }
-  
     const exportPreviewData = useMemo(() => {
         if (!lastResults) return [];
         return lastResults.groupedData.slice(0, 5).map(g => {
@@ -820,49 +807,6 @@ export default function ClientPage() {
             </CardContent>
           </Card>
           
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger>Verificar y Seleccionar Modelo de IA</AccordionTrigger>
-              <AccordionContent>
-                 <div className="space-y-4 p-2">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">Modelos de IA</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Seleccione el modelo de IA que se usará para generar los informes en PDF. Puede verificar los modelos disponibles si lo desea.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Button onClick={handleFetchModels} disabled={isFetchingModels}>
-                            {isFetchingModels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Cpu className="mr-2 h-4 w-4" />}
-                            Verificar Modelos
-                        </Button>
-                        <Select value={selectedModel} onValueChange={setSelectedModel} disabled={isGeneratingPdf || isProcessing}>
-                            <SelectTrigger className="w-[280px]">
-                                <SelectValue placeholder="Seleccionar Modelo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableModels.length > 0 ? availableModels.map(model => (
-                                    <SelectItem key={model} value={model}>{model}</SelectItem>
-                                )) : <SelectItem value={selectedModel} disabled>{selectedModel}</SelectItem>}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    {isFetchingModels && availableModels.length === 0 && <p className="text-sm text-muted-foreground">Buscando modelos...</p>}
-                    {availableModels.length > 0 && !isFetchingModels && (
-                        <div className="mt-4 p-4 bg-muted rounded-md">
-                            <p className="text-sm font-medium mb-2">Modelos encontrados:</p>
-                            <ul className="list-disc pl-5 space-y-1 text-sm">
-                                {availableModels.map(model => (
-                                    <li key={model}><code>{model}</code></li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
           {lastResults && kpis && (
              <div className="grid gap-8">
                 <Card>

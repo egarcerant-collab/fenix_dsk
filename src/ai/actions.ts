@@ -5,7 +5,6 @@
  *
  * - processSelectedFile - Downloads a file from the public folder and processes it.
  * - listFiles - Fetches the manifest of available XLSX files.
- * - listModels - Fetches the list of available AI models from the provider.
  */
 import {ai} from '@/ai/genkit';
 import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
