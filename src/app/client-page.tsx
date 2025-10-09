@@ -456,8 +456,12 @@ export default function ClientPage() {
   const { departments, municipios, filteredGroupedData } = useMemo(() => {
     if (!lastResults) return { departments: [], municipios: [], filteredGroupedData: [] };
     
-    const departments = [...new Set(lastResults.groupedData.map(g => g.keys.dpto))].sort();
+    let allDepartments = [...new Set(lastResults.groupedData.map(g => g.keys.dpto))].sort();
     
+    if (selectedFile?.toUpperCase().includes('SEPTIEMBRE')) {
+        allDepartments = allDepartments.filter(d => d !== 'DEPARTAMENTO DE RESIDENCIA' && d !== 'N/A');
+    }
+
     const byDepartment = selectedDepartment === 'all' 
       ? lastResults.groupedData
       : lastResults.groupedData.filter(g => g.keys.dpto === selectedDepartment);
@@ -468,8 +472,8 @@ export default function ClientPage() {
       ? byDepartment
       : byDepartment.filter(g => g.keys.municipio === selectedMunicipio);
       
-    return { departments, municipios, filteredGroupedData: byMunicipio };
-  }, [lastResults, selectedDepartment, selectedMunicipio]);
+    return { departments: allDepartments, municipios, filteredGroupedData: byMunicipio };
+  }, [lastResults, selectedDepartment, selectedMunicipio, selectedFile]);
 
   useEffect(() => {
     if(selectedDepartment === 'all') {
@@ -518,7 +522,7 @@ export default function ClientPage() {
                 ips: g.keys.ips,
                 municipio: g.keys.municipio,
                 numerador: g.results.NUMERADOR_CREATININA,
-                denominador: g.results.DENOMINador_CREATININA,
+                denominador: g.results.DENOMINADOR_CREATININA,
                 porcentaje: formatPercent(resultadoCreatinina),
              }
         })
@@ -948,7 +952,3 @@ export default function ClientPage() {
     </>
   );
 }
-
-    
-
-    
