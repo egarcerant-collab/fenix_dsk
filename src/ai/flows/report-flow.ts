@@ -15,15 +15,7 @@ export async function generateReportText(input: z.infer<typeof ReportRequestSche
   return await reportGenerationFlow(input);
 }
 
-const reportGenerationPrompt = ai.definePrompt({
-    name: 'reportGenerationPrompt',
-    input: { schema: ReportRequestSchema },
-    output: { schema: AIContentSchema },
-    config: {
-        model: googleAI.model('gemini-1.5-flash'),
-        apiVersion: 'v1',
-    },
-    prompt: `
+const reportGenerationPromptText = `
         You are an expert health risk analyst. Your task is to generate a robust and detailed narrative for a health indicator evaluation report based on the provided data.
         The report evaluates performance on Hypertension (HTA) and Diabetes (DM) management.
         The tone should be formal, objective, analytical, and constructive.
@@ -74,8 +66,7 @@ const reportGenerationPrompt = ai.definePrompt({
             - For each observation, suggest a concrete action. Example: For low patient capture, suggest "Implementar estrategias de búsqueda activa de pacientes con diagnóstico de HTA y DM que no se encuentran en el programa."
             - Include actions for improving data quality, such as "Realizar capacitaciones al personal sobre el correcto diligenciamiento de la data, enfatizando la importancia de los campos de laboratorio y fechas."
             - Structure the recommendations as a numbered or bulleted list for clarity. Ensure actions are actionable and directly linked to the problems identified.
-    `,
-});
+    `;
 
 
 const reportGenerationFlow = ai.defineFlow(
@@ -85,8 +76,21 @@ const reportGenerationFlow = ai.defineFlow(
     outputSchema: AIContentSchema,
   },
   async (promptInput) => {
-    // This setup uses the model defined in the prompt's config.
-    const { output } = await reportGenerationPrompt(promptInput);
+    
+    const { output } = await ai.generate({
+        model: googleAI.model('gemini-1.5-flash'),
+        prompt: {
+            text: reportGenerationPromptText,
+            input: promptInput,
+        },
+        output: {
+            schema: AIContentSchema,
+            format: 'json'
+        },
+        config: {
+             apiVersion: 'v1',
+        }
+    });
     
     if (!output) {
       throw new Error("AI failed to generate report content.");
@@ -94,5 +98,3 @@ const reportGenerationFlow = ai.defineFlow(
     return output;
   }
 );
-
-    
