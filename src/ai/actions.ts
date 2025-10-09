@@ -14,7 +14,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import {z} from 'zod';
 import {listModels as genkitListModels} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import {googleAI} from '@genkit-ai/google-genai';
 
 export async function listFiles(): Promise<string[]> {
     const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');

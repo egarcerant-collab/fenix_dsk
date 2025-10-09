@@ -8,7 +8,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { ReportRequestSchema, AIContentSchema, ReportRequest } from '../schemas';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const ReportWithModelRequestSchema = ReportRequestSchema.extend({
     model: z.string().describe("The AI model to use for generation."),
