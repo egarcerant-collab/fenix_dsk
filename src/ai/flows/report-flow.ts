@@ -25,6 +25,10 @@ const reportGenerationPrompt = ai.definePrompt({
     name: 'reportGenerationPrompt',
     input: { schema: ReportRequestSchema },
     output: { schema: AIContentSchema },
+    config: {
+        model: googleAI.model('gemini-1.5-flash'), // Use the correct model name
+        apiVersion: 'v1', // Specify the correct API version
+    },
     prompt: `
         You are an expert health risk analyst. Your task is to generate a robust and detailed narrative for a health indicator evaluation report based on the provided data.
         The report evaluates performance on Hypertension (HTA) and Diabetes (DM) management.
@@ -89,7 +93,9 @@ const reportGenerationFlow = ai.defineFlow(
   async (input) => {
     const { model, ...promptInput } = input;
     
-    const { output } = await reportGenerationPrompt(promptInput, { model: googleAI.model(model) });
+    // We override the model in the prompt definition, but we could also pass it here if needed.
+    // This setup uses the model defined in the prompt's config.
+    const { output } = await reportGenerationPrompt(promptInput);
     
     if (!output) {
       throw new Error("AI failed to generate report content.");
