@@ -86,9 +86,6 @@ const reportGenerationFlow = ai.defineFlow(
         output: {
             schema: AIContentSchema,
             format: 'json'
-        },
-        config: {
-             apiVersion: 'v1',
         }
     });
     
