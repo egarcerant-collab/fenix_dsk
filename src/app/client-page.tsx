@@ -657,7 +657,7 @@ export default function ClientPage() {
       title: 'Resultado Tamizaje Creatinina',
       cards: [
         { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
-        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATINina', description: 'Total de registros con fecha de creatinina.' },
+        { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
         { 
           label: 'Resultado Creatinina', 
           key: 'RESULTADO_CREATININA',
@@ -868,7 +868,7 @@ export default function ClientPage() {
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
-                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `{selectedDepartment}{selectedMunicipio === 'all' ? '' : ` - {selectedMunicipio}`} }`})</CardTitle>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}`})</CardTitle>
                             <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
