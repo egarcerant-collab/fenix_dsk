@@ -10,14 +10,8 @@ import { z } from 'zod';
 import { ReportRequestSchema, AIContentSchema } from '../schemas';
 import { googleAI } from '@genkit-ai/google-genai';
 
-const ReportWithModelRequestSchema = ReportRequestSchema.extend({
-    model: z.string().describe("The AI model to use for generation."),
-});
 
-export type ReportWithModelRequest = z.infer<typeof ReportWithModelRequestSchema>;
-
-
-export async function generateReportText(input: ReportWithModelRequest): Promise<z.infer<typeof AIContentSchema>> {
+export async function generateReportText(input: z.infer<typeof ReportRequestSchema>): Promise<z.infer<typeof AIContentSchema>> {
   return await reportGenerationFlow(input);
 }
 
@@ -26,8 +20,8 @@ const reportGenerationPrompt = ai.definePrompt({
     input: { schema: ReportRequestSchema },
     output: { schema: AIContentSchema },
     config: {
-        model: googleAI.model('gemini-1.5-flash'), // Use the correct model name
-        apiVersion: 'v1', // Specify the correct API version
+        model: googleAI.model('gemini-1.5-flash'),
+        apiVersion: 'v1',
     },
     prompt: `
         You are an expert health risk analyst. Your task is to generate a robust and detailed narrative for a health indicator evaluation report based on the provided data.
@@ -87,13 +81,10 @@ const reportGenerationPrompt = ai.definePrompt({
 const reportGenerationFlow = ai.defineFlow(
   {
     name: 'reportGenerationFlow',
-    inputSchema: ReportWithModelRequestSchema,
+    inputSchema: ReportRequestSchema,
     outputSchema: AIContentSchema,
   },
-  async (input) => {
-    const { model, ...promptInput } = input;
-    
-    // We override the model in the prompt definition, but we could also pass it here if needed.
+  async (promptInput) => {
     // This setup uses the model defined in the prompt's config.
     const { output } = await reportGenerationPrompt(promptInput);
     
@@ -103,3 +94,5 @@ const reportGenerationFlow = ai.defineFlow(
     return output;
   }
 );
+
+    

@@ -327,7 +327,6 @@ export default function ClientPage() {
                 month: monthForPdf,
                 monthName: monthName
             },
-            model: 'gemini-1.5-flash-latest',
         });
         
         const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
@@ -1025,3 +1024,5 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
