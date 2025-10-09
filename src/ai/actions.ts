@@ -13,7 +13,6 @@ import {ProcessFileResponseSchema} from './schemas';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import {z} from 'zod';
-import {listModels as genkitListModels} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
 export async function listFiles(): Promise<string[]> {
@@ -98,9 +97,8 @@ const processFileBufferFlow = ai.defineFlow(
 
 
 export async function listModels(): Promise<string[]> {
-    const models = await genkitListModels();
+    const models = await ai.listModels();
     return models
-        .filter(m => m.name.startsWith('googleai/'))
         .map(m => m.name.replace('googleai/', ''))
         .sort();
 }
