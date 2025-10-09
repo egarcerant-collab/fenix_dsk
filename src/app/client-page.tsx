@@ -310,7 +310,7 @@ export default function ClientPage() {
                 resultsForPdf = {
                     ...lastResults,
                     R: { ...specificGroupData.results, TOTAL_FILAS: specificGroupData.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
-                    rawRows: lastResults.rawRows, // Asegúrate de pasar las filas crudas para los inasistentes
+                    rawRows: lastResults.rawRows, 
                     headerMap: lastResults.headerMap
                 };
             } else {
@@ -333,7 +333,7 @@ export default function ClientPage() {
         
         const images: PdfImages = { background: backgroundImg };
         
-        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, false);
+        const datosInforme = mapToInformeDatos(resultsForPdf, aiContent, targetIps, targetMunicipio, true);
         
         await descargarInformePDF(datosInforme, images);
 
