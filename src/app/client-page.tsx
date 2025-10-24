@@ -662,7 +662,7 @@ export default function ClientPage() {
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
           <div className="container mx-auto flex items-center justify-center relative">
-            <h1 className="font-bold text-primary text-2xl uppercase">indicadores fenix</h1>
+            <h1 className="font-bold text-primary text-2xl uppercase">INDICADORES RCV</h1>
           </div>
         </header>
 
