@@ -569,7 +569,7 @@ export default function ClientPage() {
       ]
     },
      {
-      title: 'Adherencia Diabetes Mellitus',
+      title: 'Captación de Diabetes Mellitus',
       cards: [
         { label: 'Pacientes DM Archivo (Numerador)', key: 'NUMERADOR_DM', description: 'Total pacientes DM (18-69a) encontrados en el archivo.' },
         { label: 'Población DM Total (Denominador)', key: 'POBLACION_DM_TOTAL', description: 'Total de pacientes con diagnóstico de DM según archivo de población.' },
@@ -577,7 +577,7 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Control Diabetes Mellitus (HbA1c)',
+      title: 'Diabéticos Controlados',
       cards: [
         { label: 'DM Controlado (Numerador)', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c &lt; 7%.' },
         { label: 'Pacientes con DM (Denominador)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
@@ -585,7 +585,7 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Tamizaje con Creatinina',
+      title: 'Realización de Creatinina en el último año',
       cards: [
         { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
         { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
@@ -979,4 +979,6 @@ export default function ClientPage() {
 }
 
     
+    
+
     
