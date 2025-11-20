@@ -460,7 +460,7 @@ export default function ClientPage() {
 
     let allDepartments = [...new Set(lastResults.groupedData.map(g => g.keys.dpto))].sort();
     if (selectedFile?.toUpperCase().includes('SEPTIEMBRE')) {
-        allDepartments = allDepartments.filter(d => d !== 'DEPARTAMENTO DE RESIDENCIA' && d !== 'N/A');
+        allDepartments = allDepartments.filter(d => d !== 'DEPARTAMENTO DE RESIDENCIA' && d !== 'N/A' && ['CESAR', 'LA GUAJIRA', 'MAGDALENA'].includes(d));
     }
 
     const byDepartment = selectedDepartment === 'all'
@@ -545,7 +545,7 @@ export default function ClientPage() {
 
   const kpiGroups = kpis ? [
     {
-      title: 'Resultado Captacion HTA',
+      title: 'Captacion de HTA',
       cards: [
         { label: 'Pacientes HTA (Numerador)', key: 'NUMERADOR_HTA', description: 'Pacientes HTA (18-69a) encontrados en el archivo.' },
         { label: 'Población HTA (Denominador)', key: 'DENOMINADOR_HTA_MENORES', description: 'Total de pacientes con diagnóstico de HTA según archivo de población.' },
@@ -553,7 +553,7 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Resultado HTA &lt; 60 años',
+      title: 'Control HTA &lt; 60 años',
       cards: [
         { label: 'HTA Controlado &lt;60 (Numerador)', key: 'NUMERADOR_HTA_MENORES', description: 'Pacientes HTA (18-59a) con PA &lt; 140/90.' },
         { label: 'Población HTA &lt;60 (Denominador)', key: 'DENOMINADOR_HTA_MENORES_ARCHIVO', description: 'Pacientes HTA (18-59a) del archivo cargado.' },
@@ -561,7 +561,7 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Resultado HTA &gt;= 60 años',
+      title: 'Control HTA &gt;= 60 años',
       cards: [
         { label: 'HTA Controlado &gt;=60 (Numerador)', key: 'NUMERADOR_HTA_MAYORES', description: 'Pacientes HTA (&gt;=60a, sin DM) con PA &lt; 150/90.' },
         { label: 'Población HTA &gt;=60 (Denominador)', key: 'DENOMINADOR_HTA_MAYORES', description: 'Pacientes HTA (&gt;=60a, sin DM) del archivo cargado.' },
@@ -569,7 +569,7 @@ export default function ClientPage() {
       ]
     },
      {
-      title: 'Resultado Adherencia DM (Archivo)',
+      title: 'Adherencia Diabetes Mellitus',
       cards: [
         { label: 'Pacientes DM Archivo (Numerador)', key: 'NUMERADOR_DM', description: 'Total pacientes DM (18-69a) encontrados en el archivo.' },
         { label: 'Población DM Total (Denominador)', key: 'POBLACION_DM_TOTAL', description: 'Total de pacientes con diagnóstico de DM según archivo de población.' },
@@ -577,7 +577,7 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Resultado Control DM (HbA1c)',
+      title: 'Control Diabetes Mellitus (HbA1c)',
       cards: [
         { label: 'DM Controlado (Numerador)', key: 'NUMERADOR_DM_CONTROLADOS', description: 'Pacientes DM con HbA1c &lt; 7%.' },
         { label: 'Pacientes con DM (Denominador)', key: 'DENOMINADOR_DM_CONTROLADOS', description: 'Pacientes con DX de DM="SI" en el archivo cargado.' },
@@ -585,7 +585,7 @@ export default function ClientPage() {
       ]
     },
     {
-      title: 'Resultado Tamizaje Creatinina',
+      title: 'Tamizaje con Creatinina',
       cards: [
         { label: 'Creatinina Tomada (Numerador)', key: 'NUMERADOR_CREATININA', description: 'Pacientes con creatinina en últimos 12 meses.' },
         { label: 'Denominador Creatinina', key: 'DENOMINADOR_CREATININA', description: 'Total de registros con fecha de creatinina.' },
@@ -599,7 +599,7 @@ export default function ClientPage() {
       ]
     },
     {
-        title: 'Resultado Inasistentes',
+        title: 'Inasistentes a Control',
         cards: [
             { label: 'Inasistentes a Control', key: 'NUMERADOR_INASISTENTE', description: 'Pacientes con fecha de PA registrada pero fuera de los últimos 6 meses.' },
             { label: 'Total Filas Leídas', key: 'TOTAL_FILAS', description: 'Número total de registros en el archivo.' },
