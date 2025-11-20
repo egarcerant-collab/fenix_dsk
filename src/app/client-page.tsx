@@ -44,6 +44,7 @@ export default function ClientPage() {
   const [selectedIpsForPdf, setSelectedIpsForPdf] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedMunicipio, setSelectedMunicipio] = useState<string>('all');
+  const [selectedIps, setSelectedIps] = useState<string>('all');
 
   const [yearForPdf, setYearForPdf] = useState<number>(new Date().getFullYear());
   const [monthForPdf, setMonthForPdf] = useState<number>(new Date().getMonth() + 1);
@@ -111,6 +112,7 @@ export default function ClientPage() {
       setLastResults(results);
       setSelectedDepartment('all');
       setSelectedMunicipio('all');
+      setSelectedIps('all');
       setStatus('Completado.');
       setProgress(100);
       toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
@@ -414,7 +416,7 @@ export default function ClientPage() {
             'DENOMINADOR_DM_CONTROLADOS': denominadorDM,
             '%_DM_CONTROLADOS': resultadoDM,
             'NUMERADOR_CREATININA': g.results.NUMERADOR_CREATININA,
-            'DENOMINADOR_CREATININA': g.results.DENOMINADOR_CREATININA,
+            'DENOMINADOR_CREATININA': g.results.DENOMINADOR_CREATINina,
             '%_CREATININA': resultadoCreatinina,
         };
     });
@@ -453,27 +455,33 @@ export default function ClientPage() {
     return `${(value * 100).toFixed(1)}%`;
   }
 
-  const { departments, municipios, filteredGroupedData } = useMemo(() => {
-    if (!lastResults) return { departments: [], municipios: [], filteredGroupedData: [] };
-    
+  const { departments, municipios, ips, filteredGroupedData } = useMemo(() => {
+    if (!lastResults) return { departments: [], municipios: [], ips: [], filteredGroupedData: [] };
+
     let allDepartments = [...new Set(lastResults.groupedData.map(g => g.keys.dpto))].sort();
-    
     if (selectedFile?.toUpperCase().includes('SEPTIEMBRE')) {
         allDepartments = allDepartments.filter(d => d !== 'DEPARTAMENTO DE RESIDENCIA' && d !== 'N/A');
     }
 
-    const byDepartment = selectedDepartment === 'all' 
+    const byDepartment = selectedDepartment === 'all'
       ? lastResults.groupedData
       : lastResults.groupedData.filter(g => g.keys.dpto === selectedDepartment);
-      
-    const municipios = [...new Set(byDepartment.map(g => g.keys.municipio))].sort();
+
+    const allMunicipios = [...new Set(byDepartment.map(g => g.keys.municipio))].sort();
 
     const byMunicipio = selectedMunicipio === 'all'
       ? byDepartment
       : byDepartment.filter(g => g.keys.municipio === selectedMunicipio);
-      
-    return { departments: allDepartments, municipios, filteredGroupedData: byMunicipio };
-  }, [lastResults, selectedDepartment, selectedMunicipio, selectedFile]);
+
+    const allIps = [...new Set(byMunicipio.map(g => g.keys.ips))].sort();
+
+    const byIps = selectedIps === 'all'
+        ? byMunicipio
+        : byMunicipio.filter(g => g.keys.ips === selectedIps);
+
+    return { departments: allDepartments, municipios: allMunicipios, ips: allIps, filteredGroupedData: byIps };
+  }, [lastResults, selectedDepartment, selectedMunicipio, selectedIps, selectedFile]);
+
 
   useEffect(() => {
     if(selectedDepartment === 'all') {
@@ -481,11 +489,17 @@ export default function ClientPage() {
     }
   }, [selectedDepartment]);
 
+  useEffect(() => {
+    if (selectedMunicipio === 'all') {
+        setSelectedIps('all');
+    }
+  }, [selectedMunicipio]);
+
 
   const kpis = useMemo(() => {
     if (!lastResults) return null;
     
-    if (selectedDepartment === 'all' && selectedMunicipio === 'all') {
+    if (selectedDepartment === 'all' && selectedMunicipio === 'all' && selectedIps === 'all') {
         return lastResults.R;
     }
 
@@ -506,7 +520,7 @@ export default function ClientPage() {
         return acc;
     }, initialKpis as any);
 
-  }, [lastResults, filteredGroupedData, selectedDepartment, selectedMunicipio]);
+  }, [lastResults, filteredGroupedData, selectedDepartment, selectedMunicipio, selectedIps]);
   
   const handleClearResults = () => {
     setLastResults(null);
@@ -742,7 +756,7 @@ export default function ClientPage() {
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
-                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Totales' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}`})</CardTitle>
+                            <CardTitle>Resultados de Indicadores ({selectedDepartment === 'all' ? 'Consolidado' : `${selectedDepartment}${selectedMunicipio === 'all' ? '' : ` - ${selectedMunicipio}`}${selectedIps === 'all' ? '' : ` - ${selectedIps}`}`})</CardTitle>
                             <CardDescription>Resumen de los KPIs calculados para la selección actual.</CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -765,6 +779,17 @@ export default function ClientPage() {
                                     <SelectItem value="all">Todos los Municipios</SelectItem>
                                     {municipios.map(muni => (
                                         <SelectItem key={muni} value={muni}>{muni}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedIps} onValueChange={setSelectedIps} disabled={selectedMunicipio === 'all'}>
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Seleccionar IPSI" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las IPSI</SelectItem>
+                                    {ips.map(ipsName => (
+                                        <SelectItem key={ipsName} value={ipsName}>{ipsName}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -952,3 +977,6 @@ export default function ClientPage() {
     </>
   );
 }
+
+    
+    
