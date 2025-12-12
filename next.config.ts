@@ -30,12 +30,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    watchNextOutput: false,
-  },
-  devServer: {
-    allowedHosts: 'auto',
-  },
 };
 
 export default nextConfig;
