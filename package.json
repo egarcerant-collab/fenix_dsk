@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "npm run build:manifest",
     "dev": "next dev -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
@@ -46,7 +47,7 @@
     "genkit": "^1.21.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
-    "next": "15.3.6",
+    "next": "15.3.8",
     "patch-package": "^8.0.0",
     "pdfmake": "^0.2.10",
     "react": "^18.3.1",

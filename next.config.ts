@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    const originalIgnored = config.watchOptions.ignored || [];
+    config.watchOptions.ignored = [
+      ...(Array.isArray(originalIgnored) ? originalIgnored : [originalIgnored]),
+      '**/public/bases-manifest.json',
+    ];
+    return config;
+  },
 };
 
 export default nextConfig;
