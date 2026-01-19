@@ -40,7 +40,9 @@ const nextConfig: NextConfig = {
     config.watchOptions = {
         ...config.watchOptions,
         ignored: [
-            ...ignoredAsArray.filter(item => typeof item === 'string' && item.length > 0),
+            // Filter out any falsy values (null, undefined, '') which might be in the default config.
+            // This is safer than a strict string check, as it will preserve other valid types like RegExps.
+            ...ignoredAsArray.filter(Boolean),
             '**/public/bases-manifest.json',
         ]
     };
@@ -50,5 +52,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-    
