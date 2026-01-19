@@ -34,10 +34,15 @@ const nextConfig: NextConfig = {
     const originalIgnored = config.watchOptions.ignored || [];
     const ignoredAsArray = Array.isArray(originalIgnored) ? originalIgnored : [originalIgnored];
 
-    config.watchOptions.ignored = [
-      ...ignoredAsArray,
-      '**/public/bases-manifest.json',
-    ];
+    // Create a new watchOptions object instead of modifying a read-only property
+    config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+            ...ignoredAsArray,
+            '**/public/bases-manifest.json',
+        ]
+    };
+    
     return config;
   },
 };
