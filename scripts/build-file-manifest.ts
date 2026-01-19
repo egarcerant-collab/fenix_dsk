@@ -41,9 +41,24 @@ function main() {
   }
   
   const files = findXlsxFiles(baseDir, baseDir).sort();
+  const newManifestContent = JSON.stringify({ folder: "BASES DE DATOS", files }, null, 2);
 
-  fs.writeFileSync(outPath, JSON.stringify({ folder: "BASES DE DATOS", files }, null, 2), "utf8");
-  console.log(`Manifiesto generado: ${outPath} (${files.length} archivos)`);
+  let oldManifestContent = "";
+  try {
+    if (fs.existsSync(outPath)) {
+      oldManifestContent = fs.readFileSync(outPath, "utf8");
+    }
+  } catch (e) {
+    // Ignorar errores de lectura, simplemente sobreescribiremos
+  }
+
+  if (newManifestContent !== oldManifestContent) {
+    fs.writeFileSync(outPath, newManifestContent, "utf8");
+    console.log(`Manifiesto generado: ${outPath} (${files.length} archivos)`);
+  } else {
+    // Opcional: puedes descomentar la siguiente línea si quieres ver un mensaje cuando no hay cambios.
+    // console.log(`Manifiesto sin cambios. No se actualizó el archivo.`);
+  }
 }
 
 main();
