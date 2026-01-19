@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
     config.watchOptions = {
         ...config.watchOptions,
         ignored: [
-            ...ignoredAsArray.filter(Boolean),
+            ...ignoredAsArray.filter(item => typeof item === 'string' && item.length > 0),
             '**/public/bases-manifest.json',
         ]
     };
@@ -50,3 +50,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+    
