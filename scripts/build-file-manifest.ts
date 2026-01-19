@@ -29,14 +29,28 @@ function main() {
   const outPath = path.join(process.cwd(), "public", "bases-manifest.json");
 
   if (!fs.existsSync(baseDir)) {
-    console.warn("Advertencia: No se encontró la carpeta 'public/BASES DE DATOS'. Se generará un manifiesto vacío.");
+    console.warn("Advertencia: No se encontró la carpeta 'public/BASES DE DATOS'. Se generará un manifiesto vacío si es necesario.");
     
     const publicDir = path.join(process.cwd(), "public");
     if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir);
+      fs.mkdirSync(publicDir, { recursive: true });
     }
     
-    fs.writeFileSync(outPath, JSON.stringify({ folder: "BASES DE DATOS", files: [] }, null, 2), "utf8");
+    const newManifestContent = JSON.stringify({ folder: "BASES DE DATOS", files: [] }, null, 2);
+    let oldManifestContent = "";
+
+    try {
+        if (fs.existsSync(outPath)) {
+            oldManifestContent = fs.readFileSync(outPath, "utf8");
+        }
+    } catch (e) {
+        // Ignorar
+    }
+
+    if (newManifestContent !== oldManifestContent) {
+        fs.writeFileSync(outPath, newManifestContent, "utf8");
+        console.log(`Manifiesto vacío generado: ${outPath}`);
+    }
     return;
   }
   
