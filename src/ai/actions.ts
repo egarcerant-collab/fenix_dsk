@@ -3,7 +3,7 @@
 /**
  * @fileOverview Server actions for data processing.
  *
- * - processSelectedFile - Downloads a file from the public folder and processes it.
+ * - processSelectedFile - Reads a file from the public folder and processes it.
  * - listFiles - Fetches the manifest of available XLSX files.
  */
 import {ai} from '@/ai/genkit';
@@ -34,33 +34,27 @@ export async function listFiles(): Promise<string[]> {
 
 export async function processSelectedFile(fileName: string, year: number, month: number): Promise<DataProcessingResult> {
     
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    // La ruta del archivo ahora puede contener subdirectorios, así que la dividimos y la codificamos
-    const encodedPathParts = fileName.split('/').map(part => encodeURIComponent(part));
-    const encodedFileName = encodedPathParts.join('/');
-    const fileUrl = `${baseUrl}/BASES%20DE%20DATOS/${encodedFileName}`;
+    // In a server component, it's more reliable to read from the filesystem than to fetch from a URL.
+    // The previous implementation failed in production because 'localhost' is not available.
+    const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', fileName);
 
     try {
-        // En el entorno del servidor de Next.js, necesitamos una URL absoluta para `fetch`
-        const internalUrl = new URL(fileUrl, 'http://localhost:9002');
-        const res = await fetch(internalUrl, { cache: 'no-store' });
-
-        if (!res.ok) {
-            throw new Error(`No se pudo descargar el archivo '${fileName}' desde el servidor. Estado: ${res.status}`);
-        }
-
-        const fileBuffer = Buffer.from(await res.arrayBuffer());
+        const fileBuffer = await fs.readFile(filePath);
 
         return await processFileBufferFlow({
             fileBuffer,
-            fileName: path.basename(fileName), // Pasamos solo el nombre del archivo para mantener la lógica original
+            fileName: path.basename(fileName),
             year,
             month
         });
 
     } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            console.error(`Error procesando archivo: El archivo no se encontró en la ruta esperada: ${filePath}`);
+            throw new Error(`No se pudo encontrar el archivo '${fileName}' en el servidor. Verifique que el archivo existe en la carpeta 'public/BASES DE DATOS'.`);
+        }
         console.error(`Error procesando el archivo seleccionado '${fileName}':`, error);
-        throw new Error(`Error al procesar el archivo '${fileName}': ${error.message}`);
+        throw new Error(`Error inesperado al procesar el archivo '${fileName}': ${error.message}`);
     }
 }
 
