@@ -32,13 +32,15 @@ const nextConfig: NextConfig = {
   },
   webpack: (config) => {
     const originalIgnored = config.watchOptions.ignored || [];
-    const ignoredAsArray = Array.isArray(originalIgnored) ? originalIgnored : [originalIgnored];
+    const ignoredAsArray = Array.isArray(originalIgnored) 
+      ? originalIgnored 
+      : (originalIgnored ? [originalIgnored] : []);
 
     // Create a new watchOptions object instead of modifying a read-only property
     config.watchOptions = {
         ...config.watchOptions,
         ignored: [
-            ...ignoredAsArray,
+            ...ignoredAsArray.filter(Boolean),
             '**/public/bases-manifest.json',
         ]
     };
