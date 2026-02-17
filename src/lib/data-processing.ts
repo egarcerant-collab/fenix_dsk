@@ -307,7 +307,7 @@ export async function processDataFile(
     const range12m = yearRange(year, month);
 
     onProgress(2, 'Cargando datos de población desde el servidor...');
-    const populationMap = await getPopulationMap();
+    const populationMap = await getPopulationMap(year);
     
     onProgress(5, 'Leyendo archivo de Excel...');
     const data = readXLSX(file.buffer);

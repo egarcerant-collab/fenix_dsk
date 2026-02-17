@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import * as fs from 'node:fs';
@@ -25,22 +26,27 @@ function toNumber(val: any): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-async function loadPopulationCsv(): Promise<string> {
-  const filePath = path.join(process.cwd(), 'public', 'Poblacion 2025.csv');
-  try {
-    if (fs.existsSync(filePath)) {
-      let txt = fs.readFileSync(filePath, 'utf8');
-      if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1); 
-      return txt;
+async function loadPopulationCsv(year: number): Promise<string> {
+  const fileNamesToTry = [`Poblacion ${year}.csv`, `Poblacion${year}.csv`];
+
+  for (const fileName of fileNamesToTry) {
+    const filePath = path.join(process.cwd(), 'public', fileName);
+    try {
+      if (fs.existsSync(filePath)) {
+        let txt = fs.readFileSync(filePath, 'utf8');
+        if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1); 
+        return txt;
+      }
+    } catch (e) {
+       console.error(`Error al leer el archivo de población '${fileName}':`, e);
     }
-  } catch (e) {
-     console.error("Error reading population file from disk:", e);
   }
-  throw new Error('No se encontró el archivo de población (Poblacion 2025.csv) en la carpeta /public.');
+  
+  throw new Error(`No se encontró el archivo de población para el año ${year} (se buscó: ${fileNamesToTry.join(' y ')}).`);
 }
 
-export async function getPopulationMap(): Promise<Map<string, PopulationData>> {
-  const fileContent = await loadPopulationCsv();
+export async function getPopulationMap(year: number): Promise<Map<string, PopulationData>> {
+  const fileContent = await loadPopulationCsv(year);
   const lines = fileContent.split(/\r?\n/);
   
   if (lines.length < 2) {
