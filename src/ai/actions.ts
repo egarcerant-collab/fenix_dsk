@@ -4,17 +4,21 @@
  * @fileOverview Server actions for data processing.
  *
  * - processSelectedFile - Reads a file from the public folder and processes it.
- * - listFiles - Fetches the manifest of available XLSX files.
+ * - listFiles - Fetches the manifest of available XLSX files, updating it if necessary.
  */
 import {ai} from '@/ai/genkit';
-import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
+import {DataProcessingResult, processDataFile} from '@/lib/data--processing';
 import {ProcessFileResponseSchema} from './schemas';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import {z} from 'zod';
 import {googleAI} from '@genkit-ai/google-genai';
+import { updateFileManifest } from '@/lib/file-manifest';
 
 export async function listFiles(): Promise<string[]> {
+    // Ensure the manifest is up-to-date by checking for new files.
+    await updateFileManifest();
+
     const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');
 
     try {
@@ -23,7 +27,7 @@ export async function listFiles(): Promise<string[]> {
         return Array.isArray(data.files) ? data.files : [];
     } catch (error: any) {
         if (error.code === 'ENOENT') {
-            console.warn(`Advertencia: El archivo de manifiesto no se encontró en '${manifestPath}'. Ejecute el script de precompilación.`);
+            console.warn(`Advertencia: El archivo de manifiesto no se encontró en '${manifestPath}'. Se devolverá una lista vacía.`);
         } else {
             console.error('Error al leer o analizar el manifiesto de archivos:', error);
         }
