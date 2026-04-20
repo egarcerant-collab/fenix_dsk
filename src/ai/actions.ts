@@ -7,7 +7,7 @@
  * - listFiles - Fetches the manifest of available XLSX files, updating it if necessary.
  */
 import {ai} from '@/ai/genkit';
-import {DataProcessingResult, processDataFile} from '@/lib/data--processing';
+import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
 import {ProcessFileResponseSchema} from './schemas';
 import * as path from 'path';
 import * as fs from 'fs/promises';
