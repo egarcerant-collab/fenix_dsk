@@ -58,23 +58,38 @@ export default function ClientPage() {
 
   const fetchFiles = useCallback(() => {
     setIsRefreshing(true);
-    listFiles().then(files => {
-        setAvailableFiles(files);
-        const years = [...new Set(files.map(f => f.split('/')[0]))].sort().reverse();
-        setAvailableYears(years);
+    
+    // Primero intentamos leer el manifiesto directamente desde el cliente (ideal para Vercel)
+    fetch('/bases-manifest.json', { cache: 'no-store' })
+      .then(async res => {
+          if (!res.ok) throw new Error("Manifest not found via HTTP");
+          const data = await res.json();
+          const files = Array.isArray(data.files) ? data.files : [];
+          return files;
+      })
+      .catch(err => {
+          console.warn("Failed to fetch manifest directly, falling back to server action:", err);
+          return listFiles();
+      })
+      .then((files: string[]) => {
+          setAvailableFiles(files);
+          const years = [...new Set(files.map(f => f.split('/')[0]))].sort().reverse();
+          setAvailableYears(years);
 
-        if (years.length > 0) {
-            const latestYear = years[0];
-            setSelectedYear(currentYear => years.includes(currentYear) ? currentYear : latestYear);
-        } else if (files.length === 0) {
-             toast({ title: 'Advertencia', description: 'No se encontraron archivos en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
-        }
-    }).catch(err => {
-        console.error("Failed to list files:", err);
-        toast({ title: 'Error', description: 'No se pudo cargar la lista de archivos desde el servidor.', variant: 'destructive' });
-    }).finally(() => {
-        setIsRefreshing(false);
-    });
+          if (years.length > 0) {
+              const latestYear = years[0];
+              setSelectedYear(currentYear => years.includes(currentYear) ? currentYear : latestYear);
+          } else if (files.length === 0) {
+               toast({ title: 'Advertencia', description: 'No se encontraron archivos en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
+          }
+      })
+      .catch(err => {
+          console.error("Failed to list files:", err);
+          toast({ title: 'Error', description: 'No se pudo cargar la lista de archivos.', variant: 'destructive' });
+      })
+      .finally(() => {
+          setIsRefreshing(false);
+      });
   }, [toast]);
 
   useEffect(() => {
