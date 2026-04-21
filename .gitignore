@@ -43,3 +43,6 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# Ignorar archivos Excel de datos para no sobrecargar el repositorio (solo permitimos los JSON ligeros)
+public/BASES DE DATOS/**/*.xlsx
