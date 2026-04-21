@@ -57,8 +57,12 @@ export async function updateFileManifest(): Promise<boolean> {
   }
 
   if (newManifestContent !== oldManifestContent) {
-    fs.writeFileSync(outPath, newManifestContent, "utf8");
-    console.log(`Manifiesto actualizado: ${outPath} (${files.length} archivos)`);
+    try {
+      fs.writeFileSync(outPath, newManifestContent, "utf8");
+      console.log(`Manifiesto actualizado: ${outPath} (${files.length} archivos)`);
+    } catch (err) {
+      console.warn(`No se pudo escribir el manifiesto en ${outPath} (esperado en entornos Serverless como Vercel)`);
+    }
     return true;
   }
   

@@ -16,8 +16,26 @@ import {googleAI} from '@genkit-ai/google-genai';
 import { updateFileManifest } from '@/lib/file-manifest';
 
 export async function listFiles(): Promise<string[]> {
-    // Ensure the manifest is up-to-date by checking for new files.
-    await updateFileManifest();
+    try {
+        await updateFileManifest();
+    } catch (e) {
+        console.warn("Could not update file manifest", e);
+    }
+
+    // En Vercel, la carpeta public no está disponible en fs, hay que hacer fetch
+    if (process.env.VERCEL_URL) {
+        try {
+            const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+            const url = `${protocol}://${process.env.VERCEL_URL}/bases-manifest.json`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                return Array.isArray(data.files) ? data.files : [];
+            }
+        } catch (e) {
+            console.error("Vercel fetch failed for manifest", e);
+        }
+    }
 
     const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');
 
@@ -37,13 +55,24 @@ export async function listFiles(): Promise<string[]> {
 
 
 export async function processSelectedFile(fileName: string, year: number, month: number): Promise<DataProcessingResult> {
-    
-    // In a server component, it's more reliable to read from the filesystem than to fetch from a URL.
-    // The previous implementation failed in production because 'localhost' is not available.
-    const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', fileName);
-
     try {
-        const fileBuffer = await fs.readFile(filePath);
+        let fileBuffer: Buffer;
+
+        if (process.env.VERCEL_URL) {
+            const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+            // Encode URI components to handle spaces in folder names correctly
+            const encodedPath = fileName.split('/').map(part => encodeURIComponent(part)).join('/');
+            const url = `${protocol}://${process.env.VERCEL_URL}/BASES%20DE%20DATOS/${encodedPath}`;
+            
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Failed to fetch from Vercel URL: ${res.status} ${res.statusText}`);
+            
+            const arrayBuffer = await res.arrayBuffer();
+            fileBuffer = Buffer.from(arrayBuffer);
+        } else {
+            const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', fileName);
+            fileBuffer = await fs.readFile(filePath);
+        }
 
         return await processFileBufferFlow({
             fileBuffer,
@@ -53,10 +82,6 @@ export async function processSelectedFile(fileName: string, year: number, month:
         });
 
     } catch (error: any) {
-        if (error.code === 'ENOENT') {
-            console.error(`Error procesando archivo: El archivo no se encontró en la ruta esperada: ${filePath}`);
-            throw new Error(`No se pudo encontrar el archivo '${fileName}' en el servidor. Verifique que el archivo existe en la carpeta 'public/BASES DE DATOS'.`);
-        }
         console.error(`Error procesando el archivo seleccionado '${fileName}':`, error);
         throw new Error(`Error inesperado al procesar el archivo '${fileName}': ${error.message}`);
     }
