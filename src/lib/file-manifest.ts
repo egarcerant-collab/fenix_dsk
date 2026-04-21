@@ -19,8 +19,8 @@ function findXlsxFiles(dir: string, baseDirForRelative: string): string[] {
     const fullPath = path.join(dir, file.name);
     if (file.isDirectory()) {
       results = results.concat(findXlsxFiles(fullPath, baseDirForRelative));
-    } else if (file.isFile() && file.name.toLowerCase().endsWith(".xlsx")) {
-      results.push(path.relative(baseDirForRelative, fullPath));
+    } else if (file.isFile() && (file.name.toLowerCase().endsWith(".xlsx") || file.name.toLowerCase().endsWith(".json"))) {
+      results.push(path.relative(baseDirForRelative, fullPath).replace(/\\/g, '/'));
     }
   }
   return results;

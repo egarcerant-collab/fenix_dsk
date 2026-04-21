@@ -67,7 +67,7 @@ export default function ClientPage() {
             const latestYear = years[0];
             setSelectedYear(currentYear => years.includes(currentYear) ? currentYear : latestYear);
         } else if (files.length === 0) {
-             toast({ title: 'Advertencia', description: 'No se encontraron archivos .xlsx en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
+             toast({ title: 'Advertencia', description: 'No se encontraron archivos en /public/BASES DE DATOS/. Si añadió archivos, necesita recompilar la aplicación.', variant: 'default' });
         }
     }).catch(err => {
         console.error("Failed to list files:", err);
@@ -132,7 +132,7 @@ export default function ClientPage() {
         return;
     }
 
-    const parts = selectedFile.replace('.xlsx', '').split('/');
+    const parts = selectedFile.replace(/\.(xlsx|json)$/i, '').split('/');
     if (parts.length < 2) {
       toast({ title: 'Error de formato', description: 'El nombre del archivo no tiene el formato esperado "AÑO/MES.xlsx"', variant: 'destructive' });
       return;
@@ -675,8 +675,13 @@ export default function ClientPage() {
       <Toaster />
       <div className="min-h-screen bg-background text-foreground font-sans">
         <header className="bg-card py-4 px-6 border-b">
-          <div className="container mx-auto flex items-center justify-center relative">
+          <div className="container mx-auto flex items-center justify-between relative">
             <h1 className="font-bold text-primary text-2xl uppercase">INDICADORES RCV</h1>
+            <Button variant="outline" asChild>
+                <a href="/upload">
+                    Subir y Convertir a JSON
+                </a>
+            </Button>
           </div>
         </header>
 
@@ -684,7 +689,7 @@ export default function ClientPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Cargue y Configuración</CardTitle>
-              <CardDescription>Seleccione el año y el archivo de datos para analizar. La población se cruzará con <code>Poblacion 2025.csv</code>.</CardDescription>
+              <CardDescription>Seleccione el año y el archivo de datos para analizar. La población se cruzará con <code>Poblacion {selectedYear || "..."}.csv</code>.</CardDescription>
             </CardHeader>
             <CardContent>
                <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
@@ -715,7 +720,7 @@ export default function ClientPage() {
                     <SelectContent>
                       {filteredFiles.length > 0 ? (
                         filteredFiles.map(file => (
-                          <SelectItem key={file} value={file}>{file.split('/')[1].replace(/\.xlsx$/i, '')}</SelectItem>
+                          <SelectItem key={file} value={file}>{file.split('/')[1].replace(/\.(xlsx|json)$/i, '')}</SelectItem>
                         ))
                       ) : (
                         <SelectItem value="no-files" disabled>No hay archivos para este año</SelectItem>

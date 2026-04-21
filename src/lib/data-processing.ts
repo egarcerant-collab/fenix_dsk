@@ -63,11 +63,16 @@ const EXPECTED: { [key: string]: string[] } = {
 export const NORM = (s: any): string => (s ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase().replace(/\s+/g, ' ') : '');
 
 
-export const readXLSX = (fileBuffer: Buffer): { headers: string[], rows: any[][] } => {
-    const wb = xlsx.read(fileBuffer, { type: 'buffer' });
-    const mainWs = wb.Sheets[wb.SheetNames[0]];
-    const mainJson = xlsx.utils.sheet_to_json(mainWs, { header: 1, defval: null });
-    return { headers: (mainJson[0] as any[]) || [], rows: mainJson.slice(1) };
+export const readData = (fileBuffer: Buffer, isJson: boolean): { headers: string[], rows: any[][] } => {
+    if (isJson) {
+        const parsed = JSON.parse(fileBuffer.toString('utf-8'));
+        return { headers: (parsed[0] as any[]) || [], rows: parsed.slice(1) };
+    } else {
+        const wb = xlsx.read(fileBuffer, { type: 'buffer' });
+        const mainWs = wb.Sheets[wb.SheetNames[0]];
+        const mainJson = xlsx.utils.sheet_to_json(mainWs, { header: 1, defval: null });
+        return { headers: (mainJson[0] as any[]) || [], rows: mainJson.slice(1) };
+    }
 }
 
 const toNumber = (val: any): number | null => {
@@ -309,8 +314,9 @@ export async function processDataFile(
     onProgress(2, 'Cargando datos de población desde el servidor...');
     const populationMap = await getPopulationMap(year);
     
-    onProgress(5, 'Leyendo archivo de Excel...');
-    const data = readXLSX(file.buffer);
+    onProgress(5, 'Leyendo archivo de datos...');
+    const isJson = file.name.toLowerCase().endsWith('.json');
+    const data = readData(file.buffer, isJson);
     
     onProgress(10, 'Preparando para calcular métricas...');
     
