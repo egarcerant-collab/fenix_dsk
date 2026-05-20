@@ -13,8 +13,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Script from 'next/script';
-import { DataProcessingResult, GroupedResult, KpiResults, HeaderMap } from '@/lib/data-processing';
-import { processSelectedFile, listFiles } from '@/ai/actions';
+import { DataProcessingResult, GroupedResult, KpiResults, HeaderMap, processRawData } from '@/lib/data-processing';
+import { listFiles } from '@/ai/actions';
 import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
@@ -117,29 +117,6 @@ export default function ClientPage() {
   }, [filteredFiles, selectedFile]);
 
 
- const startProcessing = (action: Promise<DataProcessingResult>) => {
-    setIsProcessing(true);
-    setProgress(20);
-    setStatus('Procesando archivo en el servidor...');
-
-    action.then(results => {
-      setLastResults(results);
-      setSelectedDepartment('all');
-      setSelectedMunicipio('all');
-      setSelectedIps('all');
-      setStatus('Completado.');
-      setProgress(100);
-      toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
-    }).catch(err => {
-      console.error(err);
-      toast({ title: 'Error procesando archivo', description: err?.message || String(err), variant: 'destructive' });
-      setStatus('Error.');
-      setProgress(0);
-    }).finally(() => {
-      setIsProcessing(false);
-    });
- }
-
  const handleProcess = async () => {
     if (!selectedFile) {
         toast({ title: 'Error', description: 'Por favor, seleccione un archivo de la lista.', variant: 'destructive' });
@@ -148,7 +125,7 @@ export default function ClientPage() {
 
     const parts = selectedFile.replace(/\.(xlsx|json)$/i, '').split('/');
     if (parts.length < 2) {
-      toast({ title: 'Error de formato', description: 'El nombre del archivo no tiene el formato esperado "AÑO/MES.xlsx"', variant: 'destructive' });
+      toast({ title: 'Error de formato', description: 'El nombre del archivo no tiene el formato esperado "AÑO/MES.json"', variant: 'destructive' });
       return;
     }
 
@@ -164,11 +141,48 @@ export default function ClientPage() {
         toast({ title: 'Error de formato', description: 'No se pudo extraer el mes y el año del nombre del archivo.', variant: 'destructive' });
         return;
     }
-    
+
     setYearForPdf(year);
     setMonthForPdf(month);
+    setIsProcessing(true);
+    setProgress(5);
+    setStatus('Descargando archivo de datos...');
 
-    startProcessing(processSelectedFile(selectedFile, year, month));
+    try {
+      const response = await fetch(`/BASES DE DATOS/${selectedFile}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`No se pudo descargar el archivo (HTTP ${response.status})`);
+
+      setProgress(10);
+      setStatus('Leyendo datos...');
+      const jsonData = await response.json();
+      const headers = jsonData[0] as string[];
+      const rows = jsonData.slice(1) as any[][];
+
+      const result = await processRawData(
+        { headers, rows },
+        year,
+        month,
+        (pct, statusMsg) => {
+          setProgress(pct);
+          setStatus(statusMsg);
+        }
+      );
+
+      setLastResults(result);
+      setSelectedDepartment('all');
+      setSelectedMunicipio('all');
+      setSelectedIps('all');
+      setStatus('Completado.');
+      setProgress(100);
+      toast({ title: 'Éxito', description: 'El archivo ha sido procesado correctamente.' });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Error procesando archivo', description: err?.message || String(err), variant: 'destructive' });
+      setStatus('Error.');
+      setProgress(0);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const getInasistentesData = useCallback((

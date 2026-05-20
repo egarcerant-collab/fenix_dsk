@@ -307,19 +307,19 @@ export async function processDataFile(
     month: number,
     onProgress: ProgressCallback
 ): Promise<DataProcessingResult> {
-    
+
     const range6m = monthRange(year, month);
     const range12m = yearRange(year, month);
 
     onProgress(2, 'Cargando datos de población desde el servidor...');
     const populationMap = await getPopulationMap(year);
-    
+
     onProgress(5, 'Leyendo archivo de datos...');
     const isJson = file.name.toLowerCase().endsWith('.json');
     const data = readData(file.buffer, isJson);
-    
+
     onProgress(10, 'Preparando para calcular métricas...');
-    
+
     const { map: headerMap, missing } = buildHeaderMap(data.headers);
 
     const requiredColumns = ['DEPARTAMENTO DE RESIDENCIA', 'MUNICPIO DE RESIDENCIA', 'NOMBRE DE LA IPS QUE HACE SEGUIMIENTO'];
@@ -332,9 +332,41 @@ export async function processDataFile(
     }
 
     const { R, issues, groupedData } = computeMetrics(data.rows, headerMap, range6m, range12m, populationMap, onProgress);
-    
+
     const finalR = { ...R, FALTANTES_ENCABEZADOS: missing };
 
+    onProgress(100, 'Cálculo completado.');
+    return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
+}
+
+export async function processRawData(
+    data: { headers: string[]; rows: any[][] },
+    year: number,
+    month: number,
+    onProgress: ProgressCallback
+): Promise<DataProcessingResult> {
+
+    const range6m = monthRange(year, month);
+    const range12m = yearRange(year, month);
+
+    onProgress(2, 'Cargando datos de población...');
+    const populationMap = await getPopulationMap(year);
+
+    onProgress(10, 'Preparando para calcular métricas...');
+    const { map: headerMap, missing } = buildHeaderMap(data.headers);
+
+    const requiredColumns = ['DEPARTAMENTO DE RESIDENCIA', 'MUNICPIO DE RESIDENCIA', 'NOMBRE DE LA IPS QUE HACE SEGUIMIENTO'];
+    const normRequired = requiredColumns.map(NORM);
+    const normMissing = missing.map(NORM);
+    const missingRequired = normRequired.filter(req => normMissing.includes(req));
+
+    if (missingRequired.length > 0 && Array.from(populationMap.keys()).length > 0) {
+        throw new Error(`Faltan columnas clave para la agrupación (Departamento, IPS, Municipio). Columnas faltantes: ${missingRequired.join(', ')}`);
+    }
+
+    const { R, issues, groupedData } = computeMetrics(data.rows, headerMap, range6m, range12m, populationMap, onProgress);
+
+    const finalR = { ...R, FALTANTES_ENCABEZADOS: missing };
     onProgress(100, 'Cálculo completado.');
     return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
 }

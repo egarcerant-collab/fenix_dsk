@@ -1,14 +1,8 @@
 
-
-'use server';
-
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-
 export type PopulationData = { hta: number; dm: number };
 
 const NORM = (s: any): string =>
-  (s ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  (s ? String(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
         .trim().toUpperCase().replace(/\s+/g, ' ') : '');
 
 function toNumber(val: any): number {
@@ -27,34 +21,34 @@ function toNumber(val: any): number {
 }
 
 async function loadPopulationCsv(year: number): Promise<string> {
-  const fileNamesToTry = [`Poblacion ${year}.csv`, `Poblacion${year}.csv`];
+  const fileNamesToTry = [`/Poblacion ${year}.csv`, `/Poblacion${year}.csv`];
 
   for (const fileName of fileNamesToTry) {
-    const filePath = path.join(process.cwd(), 'public', fileName);
     try {
-      if (fs.existsSync(filePath)) {
-        let txt = fs.readFileSync(filePath, 'utf8');
-        if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1); 
+      const res = await fetch(fileName);
+      if (res.ok) {
+        let txt = await res.text();
+        if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
         return txt;
       }
     } catch (e) {
-       console.error(`Error al leer el archivo de población '${fileName}':`, e);
+      console.error(`Error al obtener el archivo de población '${fileName}':`, e);
     }
   }
-  
+
   throw new Error(`No se encontró el archivo de población para el año ${year} (se buscó: ${fileNamesToTry.join(' y ')}).`);
 }
 
 export async function getPopulationMap(year: number): Promise<Map<string, PopulationData>> {
   const fileContent = await loadPopulationCsv(year);
   const lines = fileContent.split(/\r?\n/);
-  
+
   if (lines.length < 2) {
       throw new Error("El archivo de población CSV está vacío o solo contiene encabezados.");
   }
 
   const headers = lines[0].split(';').map(h => NORM(h.trim()));
-  
+
   const findIndex = (variants: string[]) => {
       for(const variant of variants) {
           const idx = headers.indexOf(NORM(variant));
@@ -75,7 +69,7 @@ export async function getPopulationMap(year: number): Promise<Map<string, Popula
   if (idxIps === -1) missingCols.push('NOMBRE DE LA IPS QUE HACE SEGUIMIENTO');
   if (idxHta === -1) missingCols.push('POBLACION HTA');
   if (idxDm === -1) missingCols.push('POBLACION DM');
-  
+
   if (missingCols.length > 0) {
       throw new Error(`Archivo de población: Faltan las siguientes columnas requeridas: ${missingCols.join(', ')}. Encabezados encontrados: ${headers.join(', ')}`);
   }
@@ -91,17 +85,16 @@ export async function getPopulationMap(year: number): Promise<Map<string, Popula
     const dpto = NORM(values[idxDpto]);
     const mpio = NORM(values[idxMpio]);
     const ips  = NORM(values[idxIps]);
-    
+
     if (!dpto || !mpio || !ips) continue;
 
     const key = `${dpto}|${mpio}|${ips}`;
     const hta = toNumber(values[idxHta]);
     const dm  = toNumber(values[idxDm]);
-    
+
     const prev = map.get(key) || { hta: 0, dm: 0 };
     map.set(key, { hta: prev.hta + hta, dm: prev.dm + dm });
   }
 
   return map;
 }
-
