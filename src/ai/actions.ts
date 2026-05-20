@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { z } from 'zod';
 
-// Archivos estáticos: se leen directo del disco (funciona en Vercel con archivos del deploy)
+// Lee el manifiesto desde disco (archivo pequeño, funciona en Vercel)
 async function listStaticFiles(): Promise<string[]> {
   try {
     const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');
@@ -18,7 +18,7 @@ async function listStaticFiles(): Promise<string[]> {
   }
 }
 
-// Archivos subidos en runtime: se leen de Vercel Blob (si está configurado)
+// Lee archivos subidos en runtime desde Vercel Blob (solo si está configurado)
 async function listBlobFiles(): Promise<{ name: string; url: string }[]> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return [];
   try {
@@ -38,7 +38,6 @@ export async function listFiles(): Promise<string[]> {
     listStaticFiles(),
     listBlobFiles(),
   ]);
-  // Blob sobreescribe estático si mismo nombre
   const blobNames = blobFiles.map(f => f.name);
   const merged = [...new Set([...staticFiles, ...blobNames])];
   return merged.sort();
@@ -48,7 +47,7 @@ export async function processSelectedFile(fileName: string, year: number, month:
   try {
     let fileBuffer: Buffer;
 
-    // Intentar desde Vercel Blob primero (archivos subidos en runtime)
+    // 1. Intentar desde Vercel Blob (archivos subidos en runtime)
     const blobFiles = await listBlobFiles();
     const blobMatch = blobFiles.find(f => f.name === fileName);
 
@@ -56,8 +55,17 @@ export async function processSelectedFile(fileName: string, year: number, month:
       const res = await fetch(blobMatch.url);
       if (!res.ok) throw new Error(`Error Blob: ${res.status}`);
       fileBuffer = Buffer.from(await res.arrayBuffer());
+
+    } else if (process.env.VERCEL_URL) {
+      // 2. En Vercel: los archivos grandes de /public se leen via HTTP (no fs.readFile)
+      const encodedPath = fileName.split('/').map(p => encodeURIComponent(p)).join('/');
+      const url = `https://${process.env.VERCEL_URL}/BASES%20DE%20DATOS/${encodedPath}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Error al leer archivo estático: ${res.status} - ${url}`);
+      fileBuffer = Buffer.from(await res.arrayBuffer());
+
     } else {
-      // Leer desde /public (archivos estáticos del repo)
+      // 3. Local: leer desde filesystem
       const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', fileName);
       fileBuffer = await fs.readFile(filePath);
     }
