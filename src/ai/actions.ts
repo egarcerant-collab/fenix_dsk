@@ -1,40 +1,13 @@
-
 'use server';
-import {ai} from '@/ai/genkit';
-import {DataProcessingResult, processDataFile} from '@/lib/data-processing';
-import {ProcessFileResponseSchema} from './schemas';
+import { ai } from '@/ai/genkit';
+import { DataProcessingResult, processDataFile } from '@/lib/data-processing';
+import { ProcessFileResponseSchema } from './schemas';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import {z} from 'zod';
-import {googleAI} from '@genkit-ai/google-genai';
+import { z } from 'zod';
 
-// Obtiene la base URL del app (funciona en Vercel y local)
-function getBaseUrl(): string {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
-
-// Devuelve archivos del Blob (subidos por el usuario en runtime)
-async function listBlobFiles(): Promise<{ name: string; url: string }[]> {
-  try {
-    const res = await fetch(`${getBaseUrl()}/api/upload-json`, { cache: 'no-store' });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data.files) ? data.files : [];
-  } catch {
-    return [];
-  }
-}
-
-// Devuelve archivos estáticos del manifiesto (en /public)
+// Archivos estáticos: se leen directo del disco (funciona en Vercel con archivos del deploy)
 async function listStaticFiles(): Promise<string[]> {
-  try {
-    const res = await fetch(`${getBaseUrl()}/bases-manifest.json`, { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      return Array.isArray(data.files) ? data.files : [];
-    }
-  } catch {}
   try {
     const manifestPath = path.join(process.cwd(), 'public', 'bases-manifest.json');
     const content = await fs.readFile(manifestPath, 'utf-8');
@@ -45,13 +18,28 @@ async function listStaticFiles(): Promise<string[]> {
   }
 }
 
+// Archivos subidos en runtime: se leen de Vercel Blob (si está configurado)
+async function listBlobFiles(): Promise<{ name: string; url: string }[]> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return [];
+  try {
+    const { list } = await import('@vercel/blob');
+    const { blobs } = await list({ prefix: 'BASES DE DATOS/' });
+    return blobs.map(b => ({
+      name: b.pathname.replace('BASES DE DATOS/', ''),
+      url: b.url,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function listFiles(): Promise<string[]> {
   const [staticFiles, blobFiles] = await Promise.all([
     listStaticFiles(),
     listBlobFiles(),
   ]);
+  // Blob sobreescribe estático si mismo nombre
   const blobNames = blobFiles.map(f => f.name);
-  // Merge: blob tiene prioridad sobre estáticos (sobreescribe si mismo nombre)
   const merged = [...new Set([...staticFiles, ...blobNames])];
   return merged.sort();
 }
@@ -60,21 +48,18 @@ export async function processSelectedFile(fileName: string, year: number, month:
   try {
     let fileBuffer: Buffer;
 
-    // Intentar desde Blob primero
+    // Intentar desde Vercel Blob primero (archivos subidos en runtime)
     const blobFiles = await listBlobFiles();
-    const blobMatch = blobFiles.find(f => f.name === fileName || f.name.endsWith(`/${path.basename(fileName)}`));
+    const blobMatch = blobFiles.find(f => f.name === fileName);
 
     if (blobMatch) {
       const res = await fetch(blobMatch.url);
-      if (!res.ok) throw new Error(`Error al obtener archivo desde Blob: ${res.status}`);
+      if (!res.ok) throw new Error(`Error Blob: ${res.status}`);
       fileBuffer = Buffer.from(await res.arrayBuffer());
     } else {
       // Leer desde /public (archivos estáticos del repo)
-      const encodedPath = fileName.split('/').map(p => encodeURIComponent(p)).join('/');
-      const url = `${getBaseUrl()}/BASES%20DE%20DATOS/${encodedPath}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Error al obtener archivo estático: ${res.status}`);
-      fileBuffer = Buffer.from(await res.arrayBuffer());
+      const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', fileName);
+      fileBuffer = await fs.readFile(filePath);
     }
 
     return await processFileBufferFlow({
