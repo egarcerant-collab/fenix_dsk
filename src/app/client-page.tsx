@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults, HeaderMap } from '@/lib/data-processing';
 import { processSelectedFile, listFiles } from '@/ai/actions';
-import { generateReportText } from '@/ai/flows/report-flow';
 import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
