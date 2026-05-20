@@ -19,16 +19,24 @@ export async function processSelectedFile(fileName: string, year: number, month:
         const filePath = path.join(process.cwd(), 'public', 'BASES DE DATOS', fileName);
         const fileBuffer = await fs.readFile(filePath);
 
-        const onProgress = (percentage: number, status: string) => {
-            console.log(`Progress: ${percentage}% - ${status}`);
-        };
-
-        return await processDataFile(
+        const result = await processDataFile(
             { name: path.basename(fileName), buffer: fileBuffer } as any,
             year,
             month,
-            onProgress
+            (pct, status) => console.log(`${pct}% - ${status}`)
         );
+
+        // rawRows son ~18MB — demasiado para serializar en un Server Action
+        // Los KPIs, gráficas y PDF funcionan sin ellos
+        return {
+            ...result,
+            rawRows: [],
+            issues: {
+                dates: result.issues.dates.slice(0, 50),
+                nums: result.issues.nums.slice(0, 50),
+                cats: result.issues.cats.slice(0, 50),
+            },
+        };
     } catch (error: any) {
         console.error(`Error procesando '${fileName}':`, error);
         throw new Error(`Error al procesar '${fileName}': ${error.message}`);
