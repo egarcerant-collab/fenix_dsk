@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Script from 'next/script';
 import { DataProcessingResult, GroupedResult, KpiResults, HeaderMap, processRawData } from '@/lib/data-processing';
 import { listFiles } from '@/ai/actions';
-import { AIContent } from '@/ai/schemas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from "@/hooks/use-toast";
@@ -247,69 +246,215 @@ export default function ClientPage() {
 
  const mapToInformeDatos = useCallback((
     resultsForPdf: DataProcessingResult,
-    aiContent: AIContent,
     targetIps: string | undefined,
     targetMunicipio: string | undefined,
-    includeInasistentes: boolean
+    includePatientLists: boolean
   ): InformeDatos => {
-    const { R: kpis, rawRows, headerMap } = resultsForPdf;
+    const { R, rawRows, headerMap, groupedData } = resultsForPdf;
     const analysisDate = new Date();
-    
-    let inasistentes: InformeDatos['inasistentes'] = [];
-    if (includeInasistentes) {
-        let relevantRows = rawRows;
-        if (targetIps && targetMunicipio) {
-            relevantRows = rawRows.filter(row => 
-                (row[headerMap['ips']] || '').toUpperCase().trim() === targetIps &&
-                (row[headerMap['municipio']] || '').toUpperCase().trim() === targetMunicipio
-            );
-        }
-        inasistentes = getInasistentesData(relevantRows, headerMap);
-    }
 
+    const MONTHS = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+                    'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    const monthName = MONTHS[monthForPdf - 1];
+
+    // Rangos de fecha para textos
+    const endDate  = new Date(yearForPdf, monthForPdf - 1, 1);
+    const start12  = new Date(yearForPdf, monthForPdf - 12, 1);
+    const start6   = new Date(yearForPdf, monthForPdf - 6, 1);
+    const range12  = `${MONTHS[start12.getMonth()]} ${start12.getFullYear()} – ${MONTHS[endDate.getMonth()]} ${endDate.getFullYear()}`;
+    const range6   = `${MONTHS[start6.getMonth()]} ${start6.getFullYear()} – ${MONTHS[endDate.getMonth()]} ${endDate.getFullYear()}`;
+
+    const fmtPct = (n: number, d: number) => d > 0 ? `${(n / d * 100).toFixed(1)}%` : 'N/A';
+
+    // Calcular prevalencia
+    const pop   = R.DENOMINADOR_HTA_MENORES;
+    const htaEst  = Math.round(pop * 0.228);
+    const htaMeta = Math.round(pop * 0.1626);
+    const dmEst   = Math.round(pop * 0.035);
+    const dmMeta  = Math.round(dmEst * 0.60);
+
+    // Determinar dpto para fila de tabla
+    const matchGroup = groupedData.find(g =>
+      (!targetIps || g.keys.ips === targetIps) &&
+      (!targetMunicipio || g.keys.municipio === targetMunicipio)
+    );
+    const dpto = matchGroup?.keys.dpto || '';
+
+    // Construir filas de tablas (una por IPS, o todas si consolidado)
+    const buildRows = (g: typeof groupedData[0]) => {
+      const gR = g.results;
+      const gPop = gR.DENOMINADOR_HTA_MENORES;
+      const gHtaEst  = Math.round(gPop * 0.228);
+      const gHtaMeta = Math.round(gPop * 0.1626);
+      const gDmEst   = Math.round(gPop * 0.035);
+      const gDmMeta  = Math.round(gDmEst * 0.60);
+      return {
+        captHTA: {
+          dpto: g.keys.dpto, municipio: g.keys.municipio, ips: g.keys.ips, poblacion: gPop,
+          htaEst: gHtaEst, htaMeta: gHtaMeta, htaCasos: gR.NUMERADOR_HTA,
+          htaPctMeta: fmtPct(gR.NUMERADOR_HTA, gHtaMeta),
+          htaPctPrev: fmtPct(gR.NUMERADOR_HTA, gPop),
+        },
+        captDM: {
+          dpto: g.keys.dpto, municipio: g.keys.municipio, ips: g.keys.ips, poblacion: gPop,
+          dmEst: gDmEst, dmMeta: gDmMeta, dmCasos: gR.NUMERADOR_DM,
+          dmPctMeta: fmtPct(gR.NUMERADOR_DM, gDmMeta),
+          dmPctPrev: fmtPct(gR.NUMERADOR_DM, gPop),
+        },
+        htaMM: {
+          dpto: g.keys.dpto, municipio: g.keys.municipio, ips: g.keys.ips, poblacion: gPop,
+          may60Denom: gR.DENOMINADOR_HTA_MAYORES, may60Num: gR.NUMERADOR_HTA_MAYORES,
+          may60Pct: fmtPct(gR.NUMERADOR_HTA_MAYORES, gR.DENOMINADOR_HTA_MAYORES),
+          men60Denom: gR.DENOMINADOR_HTA_MENORES_ARCHIVO, men60Num: gR.NUMERADOR_HTA_MENORES,
+          men60Pct: fmtPct(gR.NUMERADOR_HTA_MENORES, gR.DENOMINADOR_HTA_MENORES_ARCHIVO),
+        },
+        dmCtrl: {
+          dpto: g.keys.dpto, municipio: g.keys.municipio, ips: g.keys.ips, poblacion: gPop,
+          denom: gR.DENOMINADOR_DM_CONTROLADOS, num: gR.NUMERADOR_DM_CONTROLADOS,
+          pct: fmtPct(gR.NUMERADOR_DM_CONTROLADOS, gR.DENOMINADOR_DM_CONTROLADOS),
+        },
+        lab: {
+          dpto: g.keys.dpto, municipio: g.keys.municipio, ips: g.keys.ips, poblacion: gPop,
+          creatDenom: gR.DENOMINADOR_CREATININA, creatNum: gR.NUMERADOR_CREATININA,
+          creatPct: fmtPct(gR.NUMERADOR_CREATININA, gR.DENOMINADOR_CREATININA),
+          hba1cDenom: gR.DENOMINADOR_DM_CONTROLADOS, hba1cNum: gR.NUMERADOR_HBA1C,
+          hba1cPct: fmtPct(gR.NUMERADOR_HBA1C, gR.DENOMINADOR_DM_CONTROLADOS),
+          microalbDenom: gR.DENOMINADOR_CREATININA, microalbNum: gR.NUMERADOR_MICROALBUMINURIA,
+          microalbPct: fmtPct(gR.NUMERADOR_MICROALBUMINURIA, gR.DENOMINADOR_CREATININA),
+        },
+      };
+    };
+
+    const sourceGroups = (targetIps && targetMunicipio)
+      ? groupedData.filter(g => g.keys.ips === targetIps && g.keys.municipio === targetMunicipio)
+      : groupedData;
+
+    const rows = sourceGroups.map(buildRows);
+
+    // Análisis narrativo generado dinámicamente
+    const may60Pct = fmtPct(R.NUMERADOR_HTA_MAYORES, R.DENOMINADOR_HTA_MAYORES);
+    const men60Pct = fmtPct(R.NUMERADOR_HTA_MENORES, R.DENOMINADOR_HTA_MENORES_ARCHIVO);
+    const may60NC  = R.DENOMINADOR_HTA_MAYORES - R.NUMERADOR_HTA_MAYORES;
+    const men60NC  = R.DENOMINADOR_HTA_MENORES_ARCHIVO - R.NUMERADOR_HTA_MENORES;
+    const analisisComportamiento = [
+      `Control HTA ≥60 años: ${may60Pct} (${R.NUMERADOR_HTA_MAYORES} controlados de ${R.DENOMINADOR_HTA_MAYORES}). ` +
+        (may60NC > 0 ? `${may60NC} usuario(s) no controlado(s) con riesgo cardiovascular aumentado.` : 'Cumplimiento óptimo.'),
+      `Control HTA <60 años: ${men60Pct} (${R.NUMERADOR_HTA_MENORES} controlados de ${R.DENOMINADOR_HTA_MENORES_ARCHIVO}). ` +
+        (men60NC > 0 ? `${men60NC} paciente(s) no controlado(s); se recomienda refuerzo de seguimiento.` : 'Cumplimiento óptimo.'),
+      `Diabéticos controlados: ${fmtPct(R.NUMERADOR_DM_CONTROLADOS, R.DENOMINADOR_DM_CONTROLADOS)} ` +
+        `(${R.NUMERADOR_DM_CONTROLADOS} de ${R.DENOMINADOR_DM_CONTROLADOS} con HbA1c < 7%).`,
+    ];
+
+    // Listas de pacientes
+    let inasistentes: InformeDatos['inasistentes'] = [];
+    let sinEstadificar: InformeDatos['sinEstadificar'] = [];
+
+    if (includePatientLists && rawRows.length > 0) {
+      const relevantRows = (targetIps && targetMunicipio)
+        ? rawRows.filter(row =>
+            String(row[headerMap['ips']] ?? '').toUpperCase().trim() === targetIps &&
+            String(row[headerMap['municipio']] ?? '').toUpperCase().trim() === targetMunicipio
+          )
+        : rawRows;
+
+      // Inasistentes
+      if (!R.FALTANTES_ENCABEZADOS?.includes('FECHA DE LA ULTIMA TOMA DE PRESION ARTERIAL REPORTADO EN HISTORIA CLINICA')) {
+        inasistentes = getInasistentesData(relevantRows, headerMap);
+      }
+
+      // Sin estadificar
+      const idxEstadio = headerMap['estadio_tfg'];
+      if (idxEstadio !== undefined && idxEstadio >= 0) {
+        sinEstadificar = relevantRows
+          .filter(row => {
+            const val = row[idxEstadio];
+            return val == null || String(val).trim() === '';
+          })
+          .map(row => ({
+            tipo_id:   String(row[headerMap['tipo_id']] ?? ''),
+            id:        String(row[headerMap['id']] ?? ''),
+            p_nombre:  String(row[headerMap['p_nombre']] ?? ''),
+            s_nombre:  String(row[headerMap['s_nombre']] ?? ''),
+            p_apellido: String(row[headerMap['p_apellido']] ?? ''),
+            s_apellido: String(row[headerMap['s_apellido']] ?? ''),
+          }));
+      }
+    }
 
     return {
       encabezado: {
         proceso: 'Dirección del Riesgo en Salud',
-        formato: 'Evaluación de indicadores de gestantes, hipertensos y diabéticos (código DR-PP-F-06, versión 01; emisión 18/06/2019; vigencia 02/07/2019)',
-        entidad: `${targetIps || "Consolidado"} - Municipio: ${targetMunicipio || "Todos"}`,
-        vigencia: `01/01/${yearForPdf}–31/12/${yearForPdf}`,
-        lugarFecha: `Valledupar, ${analysisDate.toLocaleDateString('es-ES')}`
+        formato: 'Evaluación de indicadores de Enfermedades Precursoras HTA y DM (DR-PP-F-06 v01)',
+        entidad: `${targetIps || 'Consolidado'} – ${targetMunicipio || 'Todos los municipios'}`,
+        vigencia: `01/01/${yearForPdf} – 31/12/${yearForPdf}`,
+        lugarFecha: `Valledupar, ${analysisDate.toLocaleDateString('es-ES')}`,
       },
-      referencia: aiContent.reference.replace(/<p>|<\/p>/g, ''),
-      analisisResumido: parseAIContent(aiContent.summary),
-      datosAExtraer: [
-        { label: "Población HTA (según archivo población)", valor: String(kpis.DENOMINADOR_HTA_MENORES) },
-        { label: "Población DM (según archivo población)", valor: String(kpis.POBLACION_DM_TOTAL) },
-        { label: "Total pacientes en data", valor: String(kpis.TOTAL_FILAS) },
-        { label: `Distribución (HTA=${kpis.NUMERADOR_HTA}, DM=${kpis.NUMERADOR_DM})`, valor: "" },
-        { label: "Inasistencia (por última TA)", valor: `${kpis.NUMERADOR_INASISTENTE} usuarios` },
-        { label: "Tamizaje Creatinina", valor: formatPercent(kpis.DENOMINADOR_CREATININA > 0 ? kpis.NUMERADOR_CREATININA / kpis.DENOMINADOR_CREATININA : 0) },
-        { label: "Tamizaje HbA1c (en DM)", valor: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_HBA1C / kpis.DENOMINADOR_DM_CONTROLADOS : 0) },
-        { label: "Tamizaje Microalbuminuria (en DM)", valor: formatPercent(kpis.DENOMINADOR_DM_CONTROLADOS > 0 ? kpis.NUMERADOR_MICROALBUMINURIA / kpis.DENOMINADOR_DM_CONTROLADOS : 0) },
-      ],
-      calidadDato: parseAIContent(aiContent.dataQuality),
-      observaciones: parseAIContent(aiContent.specificObservations),
-      compromisos: parseAIContent(aiContent.actions),
-      inasistentes: inasistentes,
+      corte: { month: monthForPdf, year: yearForPdf, monthName },
+      prevalencia: {
+        poblacion1869: pop, htaEstimados: htaEst, htaMeta, dmEstimados: dmEst, dmMeta,
+        htaReportados: R.NUMERADOR_HTA, dmReportados: R.NUMERADOR_DM,
+      },
+      analisisData: {
+        totalPacientes: R.TOTAL_FILAS,
+        soloHta: (R as any).SOLO_HTA ?? 0,
+        soloDm:  (R as any).SOLO_DM  ?? 0,
+        htaDm:   (R as any).HTA_DM   ?? 0,
+        estadificados: R.TFG_TOTAL,
+        sinEstadificarCount: R.TOTAL_FILAS - R.TFG_TOTAL,
+      },
       kpisTFG: {
-          TFG_E1: kpis.TFG_E1,
-          TFG_E2: kpis.TFG_E2,
-          TFG_E3: kpis.TFG_E3,
-          TFG_E4: kpis.TFG_E4,
-          TFG_E5: kpis.TFG_E5,
-          TFG_TOTAL: kpis.TFG_TOTAL,
-      }
+        E1: R.TFG_E1, E2: R.TFG_E2, E3: R.TFG_E3, E4: R.TFG_E4, E5: R.TFG_E5,
+        total: R.TFG_TOTAL,
+        sinEstadificar: R.TOTAL_FILAS - R.TFG_TOTAL,
+      },
+      cumplimientos: {
+        creatDenom: R.DENOMINADOR_CREATININA, creatNum: R.NUMERADOR_CREATININA, range12,
+        hba1cDenom: R.DENOMINADOR_DM_CONTROLADOS, hba1cNum: R.NUMERADOR_HBA1C, range6,
+        microalbDenom: R.DENOMINADOR_CREATININA, microalbNum: R.NUMERADOR_MICROALBUMINURIA,
+        inasistentesCount: R.NUMERADOR_INASISTENTE,
+      },
+      tablas: {
+        captacionHTA: rows.map(r => r.captHTA),
+        captacionDM:  rows.map(r => r.captDM),
+        htaMayoresMenores: rows.map(r => r.htaMM),
+        dmControlados: rows.map(r => r.dmCtrl),
+        laboratorios:  rows.map(r => r.lab),
+      },
+      analisisComportamiento,
+      calidadDato: [
+        'Verificar celdas vacías en columnas de laboratorios (creatinina, HbA1c, microalbuminuria).',
+        'Actualizar fechas de laboratorios con resultados pendientes.',
+        'Actualizar datos de contacto (dirección y teléfono) para facilitar la búsqueda activa.',
+        'Garantizar la clasificación diagnóstica completa (DM tipo 1 vs tipo 2).',
+      ],
+      observaciones: [
+        `Captación HTA vs meta: ${fmtPct(R.NUMERADOR_HTA, htaMeta)}`,
+        `Captación DM vs meta: ${fmtPct(R.NUMERADOR_DM, dmMeta)}`,
+        `Control HTA ≥60 años: ${fmtPct(R.NUMERADOR_HTA_MAYORES, R.DENOMINADOR_HTA_MAYORES)}`,
+        `Control HTA <60 años: ${fmtPct(R.NUMERADOR_HTA_MENORES, R.DENOMINADOR_HTA_MENORES_ARCHIVO)}`,
+        `Diabéticos controlados: ${fmtPct(R.NUMERADOR_DM_CONTROLADOS, R.DENOMINADOR_DM_CONTROLADOS)}`,
+        `Tamizaje Creatinina: ${fmtPct(R.NUMERADOR_CREATININA, R.DENOMINADOR_CREATININA)}`,
+        `Tamizaje HbA1c: ${fmtPct(R.NUMERADOR_HBA1C, R.DENOMINADOR_DM_CONTROLADOS)}`,
+        `Tamizaje Microalbuminuria: ${fmtPct(R.NUMERADOR_MICROALBUMINURIA, R.DENOMINADOR_CREATININA)}`,
+        `Inasistentes a control: ${R.NUMERADOR_INASISTENTE} usuarios`,
+        ...(R.TOTAL_FILAS - R.TFG_TOTAL > 0
+          ? [`Pendientes por estadificar TFG: ${R.TOTAL_FILAS - R.TFG_TOTAL} pacientes`]
+          : []),
+      ],
+      compromisos: [
+        'Garantizar tamización anual de creatinina al 100% de pacientes inscritos.',
+        'Asegurar HbA1c cada 3–6 meses en pacientes con diagnóstico de DM.',
+        'Realizar seguimiento oportuno a pacientes inasistentes (búsqueda activa).',
+        'Fortalecer la búsqueda de pacientes pendientes por estadificación TFG.',
+        'Intensificar tamizaje poblacional en personas de 18 a 69 años.',
+        'Garantizar consultas de psicología, nutrición y medicina interna según estadio renal.',
+        'Mantener actualizado el diligenciamiento de la base de datos.',
+      ],
+      inasistentes,
+      sinEstadificar,
     };
-  }, [getInasistentesData, yearForPdf]);
+  }, [getInasistentesData, yearForPdf, monthForPdf]);
 
-  const parseAIContent = (content: string): any[] => {
-        if (!content) return [];
-        // Expanded regex to remove more HTML tags like <b>
-        const cleanContent = content.replace(/<\/?(p|ul|li|ol|strong|b)>/g, '\n').trim();
-        const items = cleanContent.split('\n').map(s => s.trim()).filter(Boolean);
-        return items;
-    };
 
 
  const handleBulkGeneratePdf = async () => {
@@ -325,14 +470,7 @@ export default function ClientPage() {
     const zip = new JSZip();
     const monthName = new Date(yearForPdf, monthForPdf - 1).toLocaleString('es', { month: 'long' });
 
-    // 2.a. Contenido simulado para la IA, evitando llamadas a la API en cada PDF.
-    const mockAiContent: AIContent = {
-        reference: "<p>Análisis de indicadores de gestión del riesgo, sin redacción de IA.</p>",
-        summary: "<p>Análisis pendiente. Revisar datos para conclusiones.</p>",
-        dataQuality: "<p>Oportunidades de mejora no analizadas por IA. Revisar datos para conclusiones.</p>",
-        specificObservations: "<p>Observaciones no generadas. Revisar indicadores.</p>",
-        actions: "<p>Compromisos y acciones por definir.</p>",
-    };
+    // El contenido del PDF se genera automáticamente desde los KPIs — sin IA externa.
     
     // 2.b. Inicialización de pdfmake una sola vez para mejorar el rendimiento.
     const pdfMake = (await import("pdfmake/build/pdfmake")).default;
@@ -359,8 +497,8 @@ export default function ClientPage() {
                 headerMap: lastResults.headerMap
             };
 
-            // 3.b. Construcción del objeto de datos para el PDF, incluyendo la lista de inasistentes.
-            const reportData = mapToInformeDatos(resultsForPdf, mockAiContent, ips, municipio, true); // true: incluir inasistentes
+            // 3.b. Construcción del objeto de datos para el PDF con nuevo esquema completo.
+            const reportData = mapToInformeDatos(resultsForPdf, ips, municipio, true);
             
             // 3.c. Creación de la estructura del documento PDF.
             const docDefinition = buildDocDefinition(reportData, images);

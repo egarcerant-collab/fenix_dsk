@@ -20,11 +20,11 @@ export interface KpiResults {
     NUMERADOR_HTA_MAYORES: number;
     DENOMINADOR_HTA_MAYORES: number;
     NUMERADOR_DM_CONTROLADOS: number;
-    DENOMINADOR_DM_CONTROLADOS: number; 
+    DENOMINADOR_DM_CONTROLADOS: number;
     POBLACION_DM_TOTAL: number;
     NUMERADOR_DM: number;
     NUMERADOR_HTA_MENORES: number;
-    DENOMINADOR_HTA_MENORES: number; 
+    DENOMINADOR_HTA_MENORES: number;
     DENOMINADOR_HTA_MENORES_ARCHIVO: number;
     NUMERADOR_CREATININA: number;
     DENOMINADOR_CREATININA: number;
@@ -37,6 +37,9 @@ export interface KpiResults {
     TFG_E4: number;
     TFG_E5: number;
     TFG_TOTAL: number;
+    SOLO_HTA: number;
+    SOLO_DM: number;
+    HTA_DM: number;
 }
 
 // --- Individual KPI Calculator Functions ---
@@ -191,5 +194,8 @@ export function computeAllKpisForRow(input: KpiInput): Omit<KpiResults, 'DENOMIN
         TFG_E4: tfgResult.tfg4,
         TFG_E5: tfgResult.tfg5,
         TFG_TOTAL: tfgResult.tfgTotal,
+        SOLO_HTA: input.htaN === 'SI' && input.dmN !== 'SI' ? 1 : 0,
+        SOLO_DM: input.dmN === 'SI' && input.htaN !== 'SI' ? 1 : 0,
+        HTA_DM: input.htaN === 'SI' && input.dmN === 'SI' ? 1 : 0,
     };
 }

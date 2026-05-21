@@ -213,10 +213,10 @@ const computeMetrics = (
     const R_accumulator: KpiResults = {
         NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
         DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0, NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
-        DENOMINADOR_HTA_MENORES: 0,
-        DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
-        NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
-        TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0,
+        DENOMINADOR_HTA_MENORES: 0, DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
+        NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0,
+        NUMERADOR_INASISTENTE: 0, TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0,
+        SOLO_HTA: 0, SOLO_DM: 0, HTA_DM: 0,
     };
     
     const get = (row: any[], key: string) => { const idx = headerMap[key]; return (idx === undefined || idx < 0) ? null : row[idx]; };
@@ -236,14 +236,14 @@ const computeMetrics = (
         if (!groupedResults.has(groupKey)) {
              groupedResults.set(groupKey, {
                 keys: { dpto, municipio, ips },
-                results: { 
+                results: {
                     NUMERADOR_HTA: 0, NUMERADOR_HTA_MAYORES: 0, DENOMINADOR_HTA_MAYORES: 0, NUMERADOR_DM_CONTROLADOS: 0,
                     DENOMINADOR_DM_CONTROLADOS: 0, POBLACION_DM_TOTAL: 0,
                     NUMERADOR_DM: 0, NUMERADOR_HTA_MENORES: 0,
-                    DENOMINADOR_HTA_MENORES: 0,
-                    DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
-                    NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0, NUMERADOR_INASISTENTE: 0,
-                    TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0,
+                    DENOMINADOR_HTA_MENORES: 0, DENOMINADOR_HTA_MENORES_ARCHIVO: 0,
+                    NUMERADOR_CREATININA: 0, DENOMINADOR_CREATININA: 0, NUMERADOR_HBA1C: 0, NUMERADOR_MICROALBUMINURIA: 0,
+                    NUMERADOR_INASISTENTE: 0, TFG_E1: 0, TFG_E2: 0, TFG_E3: 0, TFG_E4: 0, TFG_E5: 0, TFG_TOTAL: 0,
+                    SOLO_HTA: 0, SOLO_DM: 0, HTA_DM: 0,
                 },
                 rowCount: 0
             });
