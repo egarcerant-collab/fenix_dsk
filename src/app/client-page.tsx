@@ -514,25 +514,36 @@ export default function ClientPage() {
         return { docDef, fileName };
       });
 
-      // ── E. Renderizar en lotes de 5 en paralelo ──────────────────────────
-      const BATCH = 5;
-      let done = 0;
-      for (let i = 0; i < tasks.length; i += BATCH) {
-        const batch = tasks.slice(i, i + BATCH);
-        await Promise.all(
-          batch.map(({ docDef, fileName }) =>
-            new Promise<void>(resolve => {
-              pdfMake.createPdf(docDef).getBlob(blob => {
-                zip.file(fileName, blob);
-                resolve();
-              });
-            })
-          )
-        );
-        done += batch.length;
-        setPdfProgress({ done, total });
-        // Ceder el hilo al navegador entre lotes para evitar freeze
+      // ── E. Renderizar uno a uno con yield entre cada PDF ─────────────────
+      // pdfMake no es thread-safe: paralelizarlo lo congela. Se genera de a
+      // uno, cediendo el hilo al navegador (setTimeout 0) para mantener la
+      // UI respondiendo y actualizar el contador en tiempo real.
+      let skipped = 0;
+      for (let i = 0; i < tasks.length; i++) {
+        const { docDef, fileName } = tasks[i];
+        try {
+          const blob = await Promise.race([
+            new Promise<Blob>((resolve, reject) => {
+              try {
+                pdfMake.createPdf(docDef).getBlob(resolve);
+              } catch (e) { reject(e); }
+            }),
+            // Timeout de seguridad: si pdfMake cuelga >20 s, pasar al siguiente
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout: ${fileName}`)), 20_000)
+            ),
+          ]);
+          zip.file(fileName, blob);
+        } catch (pdfErr: any) {
+          console.warn(`PDF omitido (${fileName}):`, pdfErr?.message);
+          skipped++;
+        }
+        setPdfProgress({ done: i + 1, total });
+        // Ceder al event loop → React actualiza el DOM y el navegador no se congela
         await new Promise(r => setTimeout(r, 0));
+      }
+      if (skipped > 0) {
+        toast({ title: `⚠️ ${skipped} PDF(s) omitidos`, description: 'Ver consola para detalle.', variant: 'default' });
       }
 
       // ── F. Comprimir y descargar (nivel 1 = rápido) ──────────────────────
