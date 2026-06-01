@@ -26,13 +26,12 @@ import { Toaster } from '@/components/ui/toaster';
 
 // Make XLSX global if it's loaded from a script
 declare global {
-  interface Window { XLSX: any; pdfMake: any; }
+  interface Window { XLSX: any; }
 }
 
 export default function ClientPage() {
   const { toast } = useToast();
   const [xlsxLoaded, setXlsxLoaded] = useState(false);
-  const [pdfmakeReady, setPdfmakeReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -465,14 +464,14 @@ export default function ClientPage() {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
     }
-    if (!pdfmakeReady || !window.pdfMake?.createPdf) {
-      toast({ title: 'Espere', description: 'pdfMake aún se está cargando. Reintente en unos segundos.', variant: 'default' });
-      return;
-    }
     setIsGeneratingSinglePdf(true);
-    const pdfMake = window.pdfMake;   // CDN global — sin imports dinámicos
 
     try {
+      // Import secuencial — el único patrón que funcionó en producción Vercel
+      const pdfMake = (await import('pdfmake/build/pdfmake')).default;
+      const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
+      pdfMake.vfs = pdfFonts;
+
       const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       const images: PdfImages = { background: backgroundImg };
 
@@ -552,13 +551,11 @@ export default function ClientPage() {
     const hm = lastResults.headerMap;
 
     try {
-      // ── A. Usar pdfMake del CDN global (ya cargado con fuentes) ──────────
-      if (!pdfmakeReady || !window.pdfMake?.createPdf) {
-        toast({ title: 'Espere', description: 'pdfMake aún se está cargando.', variant: 'default' });
-        setIsGeneratingPdf(false);
-        return;
-      }
-      const pdfMake = window.pdfMake;
+      // ── A. Import secuencial — patrón probado en Vercel producción ────────
+      const pdfMake = (await import('pdfmake/build/pdfmake')).default;
+      const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
+      pdfMake.vfs = pdfFonts;
+
       const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       const images: PdfImages = { background: backgroundImg };
 
@@ -952,18 +949,6 @@ export default function ClientPage() {
         src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
         strategy="lazyOnload"
         onLoad={() => setXlsxLoaded(true)}
-      />
-      {/* pdfMake: cargar pdfmake primero, luego vfs_fonts dentro de onLoad para garantizar orden */}
-      <Script
-        id="pdfmake-core"
-        src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"
-        strategy="lazyOnload"
-        onLoad={() => {
-          const s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js';
-          s.onload = () => setPdfmakeReady(true);
-          document.head.appendChild(s);
-        }}
       />
       <Toaster />
       <div className="min-h-screen bg-background text-foreground font-sans">
