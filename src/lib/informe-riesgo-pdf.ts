@@ -186,7 +186,8 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
     styles: {},
     background: (currentPage: number, pageSize: any) => {
       if (!images?.background) return null;
-      return { image: images.background, width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 } };
+      // Sin absolutePosition — pdfMake background layer lo coloca detrás del contenido
+      return { image: images.background, width: pageSize.width, height: pageSize.height };
     },
     content,
   };
