@@ -569,7 +569,7 @@ export default function ClientPage() {
       const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
       pdfMake.vfs = pdfFonts;
 
-      const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
+      const backgroundImg = await loadImageAsBase64('/img/fondo.jpg');
       const images: PdfImages = { background: backgroundImg };
 
       // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
