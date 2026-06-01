@@ -517,9 +517,19 @@ export default function ClientPage() {
         ? `Informe_${targetIps.replace(/[^a-zA-Z0-9]/g,'_')}_${targetMun?.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`
         : `Informe_Consolidado_${MONTHS[monthForPdf-1]}_${yearForPdf}.pdf`;
 
-      // download() sin callback — CDN dispara la descarga directamente
-      pdfMake.createPdf(docDef).download(fileName);
-      toast({ title: 'PDF descargando…', description: fileName });
+      // getBlob + ancla → no requiere permiso de popup y no se bloquea
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Tiempo de espera agotado (30 s)')), 30_000);
+        try {
+          pdfMake.createPdf(docDef).getBlob((b: Blob) => { clearTimeout(timer); resolve(b); });
+        } catch (e) { clearTimeout(timer); reject(e); }
+      });
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast({ title: '✅ PDF descargado', description: fileName });
 
     } catch (err: any) {
       console.error('Error PDF individual:', err);
