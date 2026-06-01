@@ -189,7 +189,7 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
     images: images?.background ? { fondo: images.background } : undefined,
     background: (currentPage: number, pageSize: any) => {
       if (!images?.background) return null;
-      return { image: 'fondo', width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 } };
+      return { image: 'fondo', width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 }, opacity: 0.15 };
     },
     content,
   };
