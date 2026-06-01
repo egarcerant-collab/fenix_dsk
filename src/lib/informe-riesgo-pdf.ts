@@ -21,139 +21,157 @@ export interface InformeDatos {
   pacientesPorEstadio?: { E1: string[]; E2: string[]; E3: string[]; E4: string[]; E5: string[]; };
 }
 
-/* ── helpers ── */
-const H  = (t: string) => ({ text: t, bold: true, fontSize: 10, color: '#1a3a5c', margin: [0, 8, 0, 3] });
-const TH = (t: string) => ({ text: String(t ?? ''), bold: true, fontSize: 7.5, alignment: 'center' as const, margin: [1, 2, 1, 2] });
-const TD = (t: any, left = false) => ({ text: String(t ?? ''), fontSize: 7.5, alignment: (left ? 'left' : 'center') as const, margin: [1, 2, 1, 2] });
+/* helpers */
+const H  = (t: string) => ({ text: t, bold: true, fontSize: 11, color: '#1a3a5c', margin: [0,10,0,3] });
+const TH = (t: string) => ({ text: String(t ?? ''), bold: true, fontSize: 8, alignment: 'center' as const, margin: [2,3,2,3] });
+const TD = (t: any, left = false) => ({ text: String(t ?? ''), fontSize: 8, alignment: (left ? 'left' : 'center') as const, margin: [2,2,2,2] });
 const pct = (n: number, d: number) => d > 0 ? `${((n/d)*100).toFixed(1)}%` : '0%';
-const body = (header: any[], rows: any[][]) => rows.length > 0 ? [header, ...rows] : [header, [{ text: '-', colSpan: header.length, alignment: 'center' as const, fontSize: 7, margin: [1,2,1,2] }, ...Array(header.length - 1).fill({ text:'' }) ]];
+const safeRows = (hdr: any[], rows: any[][]) =>
+  rows.length > 0 ? [hdr, ...rows]
+    : [hdr, [{ text:'-', colSpan: hdr.length, alignment:'center' as const, fontSize:7, margin:[1,2,1,2] },
+              ...Array(hdr.length-1).fill({text:''}) ]];
 
-export function buildDocDefinition(data: InformeDatos, _images?: PdfImages): any {
+export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any {
   const { corte: c, prevalencia: pr, analisisData: ad, kpisTFG: tfg, cumplimientos: cum } = data;
   const content: any[] = [];
 
-  /* ── Encabezado compact ── */
+  /* 1 — Encabezado */
+  content.push({
+    table: { widths: ['auto','*'], body: [
+      [{ text:'Proceso:', bold:true, fontSize:9 }, { text:data.encabezado.proceso, fontSize:9 }],
+      [{ text:'Entidad:', bold:true, fontSize:9 }, { text:data.encabezado.entidad, fontSize:9 }],
+      [{ text:'Vigencia:', bold:true, fontSize:9 }, { text:data.encabezado.vigencia, fontSize:9 }],
+      [{ text:'Lugar/Fecha:', bold:true, fontSize:9 }, { text:data.encabezado.lugarFecha, fontSize:9 }],
+    ]}, layout:'lightHorizontalLines', margin:[0,0,0,8]
+  });
+
+  /* 2 — Referencia */
   content.push(
-    { text: `EVALUACION INDICADORES RCV — ${c.monthName} ${c.year}`, bold: true, fontSize: 12, color: '#1a3a5c', margin: [0,0,0,4] },
-    { text: `IPS: ${data.encabezado.entidad}   |   Lugar/Fecha: ${data.encabezado.lugarFecha}`, fontSize: 8, margin: [0,0,0,8] }
+    H('REF. EVALUACION DATA ENFERMEDADES PRECURSORAS HTA - DM'),
+    { text:`Analisis a corte ${c.monthName} ${c.year}. Evaluacion de indicadores de gestion del riesgo cardiovascular.`, fontSize:9, margin:[0,0,0,8] }
   );
 
-  /* ── Resumen general ── */
-  content.push(
-    H('RESUMEN GENERAL'),
-    { table: { widths: ['*','*','*','*','*','*'], body: [
-        [TH('TOTAL PAC'), TH('SOLO HTA'), TH('SOLO DM'), TH('HTA+DM'), TH('ESTADIFICADOS'), TH('SIN ESTADIF.')],
-        [TD(ad.totalPacientes), TD(ad.soloHta), TD(ad.soloDm), TD(ad.htaDm), TD(ad.estadificados), TD(ad.sinEstadificarCount)],
-    ]}, layout: 'lightHorizontalLines', margin: [0,0,0,6] },
-
-    { table: { widths: [55,55,55,55,55,'*'], body: [
-        [TH('ESTADIO I'), TH('ESTADIO II'), TH('ESTADIO III'), TH('ESTADIO IV'), TH('ESTADIO V'), TH('SIN ESTADIF.')],
-        [TD(tfg.E1), TD(tfg.E2), TD(tfg.E3), TD(tfg.E4), TD(tfg.E5), TD(tfg.sinEstadificar)],
-    ]}, layout: 'lightHorizontalLines', margin: [0,0,0,8] }
-  );
-
-  /* ── Prevalencia ── */
+  /* 3 — Prevalencia */
   content.push(
     H('PREVALENCIA HTA Y DM'),
-    { text: `Poblacion 18-69: ${pr.poblacion1869} | HTA estimados (22.8%): ${pr.htaEstimados} | Meta HTA (16.26%): ${pr.htaMeta} | HTA reportados: ${pr.htaReportados}`, fontSize: 8, margin:[0,0,0,2] },
-    { text: `DM estimados (3.5%): ${pr.dmEstimados} | Meta DM (60%): ${pr.dmMeta} | DM reportados: ${pr.dmReportados}`, fontSize: 8, margin:[0,0,0,8] }
+    { text:`Poblacion 18-69: ${pr.poblacion1869} | HTA estimados (22.8%): ${pr.htaEstimados} | Meta HTA (16.26%): ${pr.htaMeta} | Reportados: ${pr.htaReportados}`, fontSize:9, margin:[0,0,0,3] },
+    { text:`DM estimados (3.5%): ${pr.dmEstimados} | Meta DM (60%): ${pr.dmMeta} | DM reportados: ${pr.dmReportados}`, fontSize:9, margin:[0,0,0,8] }
   );
 
-  /* ── TABLA MAESTRA de indicadores ── */
-  content.push(H('INDICADORES DE GESTION DEL RIESGO'));
-
-  // Construir filas de una sola tabla consolidada
-  const indRows: any[][] = [];
-  for (const r of data.tablas.captacionHTA) {
-    indRows.push([
-      TD(r.ips, true), TD(r.municipio),
-      TD(r.htaCasos), TD(r.htaMeta), TD(r.htaPctMeta),
-      TD(r.dmCasos), TD(r.dmMeta), TD(r.dmPctMeta),
-    ]);
-  }
-  // Agregar mayores/menores y DM/labs si misma IPS
-  if (data.tablas.htaMayoresMenores.length > 0) {
-    const hm = data.tablas.htaMayoresMenores[0];
-    const dc = data.tablas.dmControlados[0];
-    const lb = data.tablas.laboratorios[0];
-    content.push(
-      { table: { headerRows:1, widths:['*',50, 32,32,32, 32,32,32], body: body(
-          [TH('IPS'), TH('MUNICIPIO'), TH('HTA\nCASOS'), TH('META\nHTA'), TH('%\nHTA'), TH('DM\nCASOS'), TH('META\nDM'), TH('%\nDM')],
-          indRows
-      )}, layout:'lightHorizontalLines', margin:[0,0,0,4] },
-
-      { table: { headerRows:1, widths:['*', 32,32,32, 32,32,32], body: body(
-          [TH('IPS'), TH('HTA>=60\nCTRL'), TH('HTA>=60\n%'), TH('HTA<60\nCTRL'), TH('HTA<60\n%'), TH('DM\nCTRL'), TH('DM\n%')],
-          [[TD(hm.ips, true), TD(hm.may60Num), TD(hm.may60Pct), TD(hm.men60Num), TD(hm.men60Pct), TD(dc?.num??''), TD(dc?.pct??'')]]
-      )}, layout:'lightHorizontalLines', margin:[0,0,0,4] },
-
-      H('COBERTURA LABORATORIOS TRAZADORES'),
-      { table: { widths: ['*','*','*'], body: [
-          [TH('CREATININA'), TH('HbA1c (DM)'), TH('MICROALBUMINURIA')],
-          [TD(`${lb?.creatNum??0} de ${lb?.creatDenom??0} = ${lb?.creatPct??'0%'}`), TD(`${lb?.hba1cNum??0} de ${lb?.hba1cDenom??0} = ${lb?.hba1cPct??'0%'}`), TD(`${lb?.microalbNum??0} de ${lb?.microalbDenom??0} = ${lb?.microalbPct??'0%'}`)],
-      ]}, layout:'lightHorizontalLines', margin:[0,0,0,4] }
-    );
-  } else {
-    content.push(
-      { table: { headerRows:1, widths:['*',50, 32,32,32, 32,32,32], body: body(
-          [TH('IPS'), TH('MUNICIPIO'), TH('HTA\nCASOS'), TH('META\nHTA'), TH('%\nHTA'), TH('DM\nCASOS'), TH('META\nDM'), TH('%\nDM')],
-          indRows
-      )}, layout:'lightHorizontalLines', margin:[0,0,0,8] }
-    );
-  }
-
-  /* ── Cumplimientos ── */
+  /* 4 — Analisis data */
   content.push(
-    H('CUMPLIMIENTOS LABORATORIOS'),
-    { text: `Creatinina: ${cum.creatNum}/${cum.creatDenom} = ${pct(cum.creatNum,cum.creatDenom)} (${cum.range12})`, fontSize: 8, margin:[0,0,0,2] },
-    { text: `HbA1c: ${cum.hba1cNum}/${cum.hba1cDenom} = ${pct(cum.hba1cNum,cum.hba1cDenom)} (${cum.range6})`, fontSize: 8, margin:[0,0,0,2] },
-    { text: `Microalbuminuria: ${cum.microalbNum}/${cum.microalbDenom} = ${pct(cum.microalbNum,cum.microalbDenom)} | Inasistentes: ${cum.inasistentesCount} usuarios`, fontSize: 8, margin:[0,0,0,6] }
+    H('ANALISIS DE DATA HTA - DM'),
+    { table: { widths:['*','*','*','*','*','*'], body: [
+        [TH('TOTAL PAC'), TH('SOLO HTA'), TH('SOLO DM'), TH('HTA+DM'), TH('ESTADIFICADOS'), TH('SIN ESTADIF.')],
+        [TD(ad.totalPacientes), TD(ad.soloHta), TD(ad.soloDm), TD(ad.htaDm), TD(tfg.total), TD(tfg.sinEstadificar)],
+    ]}, layout:'lightHorizontalLines', margin:[0,0,0,4] },
+    { table: { widths:[50,50,50,50,50,'*'], body: [
+        [TH(`ESTADIO I\n(>=90)`), TH(`ESTADIO II\n(60-89)`), TH(`ESTADIO III\n(30-59)`), TH(`ESTADIO IV\n(15-29)`), TH(`ESTADIO V\n(<15)`), TH('SIN\nESTADIF.')],
+        [TD(tfg.E1), TD(tfg.E2), TD(tfg.E3), TD(tfg.E4), TD(tfg.E5), TD(tfg.sinEstadificar)],
+    ]}, layout:'lightHorizontalLines', margin:[0,0,0,4] },
+    { text:`Creatinina: ${cum.creatNum}/${cum.creatDenom} = ${pct(cum.creatNum,cum.creatDenom)} (${cum.range12})`, fontSize:9, margin:[0,0,0,2] },
+    { text:`HbA1c: ${cum.hba1cNum}/${cum.hba1cDenom} = ${pct(cum.hba1cNum,cum.hba1cDenom)} (${cum.range6}) | Microalbuminuria: ${cum.microalbNum}/${cum.microalbDenom} = ${pct(cum.microalbNum,cum.microalbDenom)}`, fontSize:9, margin:[0,0,0,2] },
+    { text:`Inasistentes a control: ${cum.inasistentesCount} usuarios. Ver ANEXO 1.`, fontSize:9, margin:[0,0,0,8] }
   );
 
-  /* ── Observaciones breves ── */
-  if (data.observaciones.length > 0) {
-    content.push(
-      H('OBSERVACIONES'),
-      { ul: data.observaciones.slice(0,10).map(t => ({ text: t, fontSize: 7.5 })), margin:[0,0,0,4] }
-    );
-  }
+  /* 5 — Captacion HTA */
+  content.push(
+    H('INDICADOR DE CAPTACION HTA'),
+    { table: { headerRows:1, widths:[40,50,'*',32,32,32,32,32], body: safeRows(
+        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB'), TH('PREV\n22.8%'), TH('META\n16.26%'), TH('CASOS'), TH('%\nMETA')],
+        data.tablas.captacionHTA.map(r=>[TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.htaEst), TD(r.htaMeta), TD(r.htaCasos), TD(r.htaPctMeta)])
+    )}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+  );
 
-  /* ── ANEXO 1: Inasistentes ── */
+  /* 6 — Captacion DM */
+  content.push(
+    H('INDICADOR DE CAPTACION DM'),
+    { table: { headerRows:1, widths:[40,50,'*',32,32,32,32,32], body: safeRows(
+        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB'), TH('PREV\n3.5%'), TH('META\n60%'), TH('CASOS'), TH('%\nMETA')],
+        data.tablas.captacionDM.map(r=>[TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.dmEst), TD(r.dmMeta), TD(r.dmCasos), TD(r.dmPctMeta)])
+    )}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+  );
+
+  /* 7 — HTA Mayores/Menores */
+  content.push(
+    H('INDICADOR HTA MAYORES Y MENORES DE 60 ANOS'),
+    { table: { headerRows:1, widths:[38,48,'*',28,32,30,28,32,30], body: safeRows(
+        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB'), TH('>=60\nDEN'), TH('>=60\n%'), TH('<60\nDEN'), TH('<60\nCTRL'), TH('<60\n%')],
+        data.tablas.htaMayoresMenores.map(r=>[TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.may60Denom), TD(r.may60Pct), TD(r.men60Denom), TD(r.men60Num), TD(r.men60Pct)])
+    )}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+  );
+
+  /* 8 — DM Controlados */
+  content.push(
+    H('INDICADOR DIABETICOS CONTROLADOS'),
+    { table: { headerRows:1, widths:[45,55,'*',38,50,55,38], body: safeRows(
+        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB'), TH('PAC\nCON DM'), TH('DM\nCONTROLADOS'), TH('%')],
+        data.tablas.dmControlados.map(r=>[TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.denom), TD(r.num), TD(r.pct)])
+    )}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+  );
+
+  /* 9 — Laboratorios vertical */
+  content.push(
+    H('COBERTURA LABORATORIOS TRAZADORES'),
+    { table: { headerRows:1, widths:['*',55,60,60,50], body: safeRows(
+        [TH('IPS / MUNICIPIO'), TH('INDICADOR'), TH('TOTAL\nREGISTRADOS'), TH('VIGENTES'), TH('%')],
+        data.tablas.laboratorios.flatMap(r=>[
+          [TD(`${r.ips} — ${r.municipio}`,true), TD('Creatinina'),       TD(r.creatDenom),   TD(r.creatNum),   TD(r.creatPct)],
+          [TD('',true),                           TD('HbA1c (DM)'),       TD(r.hba1cDenom),   TD(r.hba1cNum),   TD(r.hba1cPct)],
+          [TD('',true),                           TD('Microalbuminuria'), TD(r.microalbDenom), TD(r.microalbNum), TD(r.microalbPct)],
+        ])
+    )}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+  );
+
+  /* 10 — Observaciones */
+  if (data.observaciones.length) content.push(
+    H('OBSERVACIONES'),
+    { ul: data.observaciones.map(t=>({text:t, fontSize:9})), margin:[0,0,0,6] }
+  );
+
+  /* 11 — Compromisos */
+  if (data.compromisos.length) content.push(
+    H('COMPROMISOS Y ACCIONES'),
+    { ul: data.compromisos.map(t=>({text:t, fontSize:9})), margin:[0,0,0,6] }
+  );
+
+  content.push({ text:'Elaborado por: Profesional PYM - Ruta Cardiovascular y Metabolica', fontSize:8, italics:true, margin:[0,10,0,0] });
+
+  /* ANEXO 1 — Inasistentes */
   if (data.inasistentes?.length) {
     content.push(
-      { text: 'ANEXO 1 - PACIENTES INASISTENTES A CONTROL', bold:true, fontSize:9, color:'#1a3a5c', margin:[0,8,0,3], pageBreak:'before' },
-      { table: { headerRows:1, widths:[26,50,50,50,50,50,40,'*'], body: [
+      { text:'ANEXO 1 - PACIENTES INASISTENTES A CONTROL', bold:true, fontSize:10, color:'#1a3a5c', margin:[0,0,0,4], pageBreak:'before' },
+      { table: { headerRows:1, widths:[26,50,50,50,50,50,40,'*'], body:[
           [TH('TIPO'), TH('ID'), TH('1er NOMBRE'), TH('2do NOMBRE'), TH('1er APELLIDO'), TH('2do APELLIDO'), TH('TEL'), TH('DIR')],
-          ...data.inasistentes.map(p => [TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true), TD(p.tel), TD(p.dir,true)]),
+          ...data.inasistentes.map(p=>[TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true), TD(p.tel), TD(p.dir,true)]),
       ]}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
     );
   }
 
-  /* ── ANEXO 2: Sin Estadificar ── */
+  /* ANEXO 2 — Sin Estadificar */
   if (data.sinEstadificar?.length) {
     content.push(
-      { text: 'ANEXO 2 - PENDIENTES DE ESTADIFICACION TFG', bold:true, fontSize:9, color:'#1a3a5c', margin:[0,8,0,3] },
-      { table: { headerRows:1, widths:[30,58,'*','*','*','*'], body: [
+      { text:'ANEXO 2 - PENDIENTES DE ESTADIFICACION TFG', bold:true, fontSize:10, color:'#1a3a5c', margin:[0,8,0,4] },
+      { table: { headerRows:1, widths:[30,58,'*','*','*','*'], body:[
           [TH('TIPO'), TH('ID'), TH('1er NOMBRE'), TH('2do NOMBRE'), TH('1er APELLIDO'), TH('2do APELLIDO')],
-          ...data.sinEstadificar.map(p => [TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true)]),
+          ...data.sinEstadificar.map(p=>[TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true)]),
       ]}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
     );
   }
 
-  /* ── ANEXO 3: Pacientes por estadio (solo si se pide) ── */
+  /* ANEXO 3 — Pacientes por estadio (solo PDF individual) */
   if (data.pacientesPorEstadio) {
-    const labels: [string, string][] = [['E1','Estadio I (TFG>=90)'],['E2','Estadio II (TFG 60-89)'],['E3','Estadio III (TFG 30-59)'],['E4','Estadio IV (TFG 15-29)'],['E5','Estadio V (TFG<15)']];
-    const hayPac = labels.some(([k]) => (data.pacientesPorEstadio as any)[k]?.length > 0);
-    if (hayPac) {
-      content.push({ text: 'ANEXO 3 - PACIENTES POR ESTADIO TFG', bold:true, fontSize:9, color:'#1a3a5c', margin:[0,8,0,3], pageBreak:'before' });
-      for (const [key, label] of labels) {
+    const labs: [string,string][] = [['E1','Estadio I (TFG >= 90)'],['E2','Estadio II (TFG 60-89)'],['E3','Estadio III (TFG 30-59)'],['E4','Estadio IV (TFG 15-29)'],['E5','Estadio V (TFG < 15)']];
+    if (labs.some(([k]) => (data.pacientesPorEstadio as any)[k]?.length)) {
+      content.push({ text:'ANEXO 3 - PACIENTES POR ESTADIO TFG', bold:true, fontSize:10, color:'#1a3a5c', margin:[0,0,0,4], pageBreak:'before' });
+      for (const [key, label] of labs) {
         const pats: string[] = (data.pacientesPorEstadio as any)[key] ?? [];
         if (!pats.length) continue;
         content.push(
-          { text: `${label} — ${pats.length} pacientes`, bold:true, fontSize:8, margin:[0,6,0,2] },
-          { table: { headerRows:1, widths:[20,'*'], body: [
+          { text:`${label} — ${pats.length} pacientes`, bold:true, fontSize:9, margin:[0,6,0,2] },
+          { table: { headerRows:1, widths:[20,'*'], body:[
               [TH('N'), TH('NOMBRE — ID')],
-              ...pats.map((n,i)=>[TD(i+1),TD(n,true)]),
+              ...pats.map((n,i)=>[TD(i+1), TD(n,true)]),
           ]}, layout:'lightHorizontalLines', margin:[0,0,0,4] }
         );
       }
@@ -162,18 +180,23 @@ export function buildDocDefinition(data: InformeDatos, _images?: PdfImages): any
 
   return {
     pageSize: 'A4',
-    pageMargins: [45, 45, 45, 45],
-    info: { title: `RCV ${c.monthName} ${c.year} — ${data.encabezado.entidad}` },
-    defaultStyle: { fontSize: 8, lineHeight: 1.2, font: 'Roboto' },
-    styles: { },
+    pageMargins: [50, 85, 50, 60],
+    info: { title:`RCV ${c.monthName} ${c.year}`, author:'Dusakawi EPS' },
+    defaultStyle: { fontSize:9, lineHeight:1.25, font:'Roboto' },
+    styles: {},
+    /* CLAVE: fondo solo en pág 1 → 8-10x más rápido que en todas las páginas */
+    background: (currentPage: number, pageSize: any) => {
+      if (currentPage !== 1 || !images?.background) return null;
+      return { image: images.background, width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 } };
+    },
     content,
   };
 }
 
 export async function descargarInformePDF(datos: InformeDatos, images?: PdfImages, nombre = 'Informe_RCV.pdf') {
-  const pdfMake = (await import('pdfmake/build/pdfmake')).default;
-  const vfsFonts = (await import('pdfmake/build/vfs_fonts')).default;
-  (pdfMake as any).vfs = vfsFonts;
-  pdfMake.createPdf(buildDocDefinition(datos, images)).download(nombre);
+  const pm = (await import('pdfmake/build/pdfmake')).default;
+  const vf = (await import('pdfmake/build/vfs_fonts')).default;
+  (pm as any).vfs = vf;
+  pm.createPdf(buildDocDefinition(datos, images)).download(nombre);
 }
-export async function registerArialIfAvailable(_pdfMake: any) {}
+export async function registerArialIfAvailable(_: any) {}
