@@ -530,12 +530,11 @@ export default function ClientPage() {
         ? `Informe_${targetIps.replace(/[^a-zA-Z0-9]/g,'_')}_${targetMun?.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`
         : `Informe_Consolidado_${MONTHS[monthForPdf-1]}_${yearForPdf}.pdf`;
 
-      // getBlob + ancla → no requiere permiso de popup y no se bloquea
+      // Sin timeout — 1 solo PDF puede tardar hasta 2 min con todos los anexos
       const blob = await new Promise<Blob>((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Tiempo de espera agotado (30 s)')), 30_000);
         try {
-          pdfMake.createPdf(docDef).getBlob((b: Blob) => { clearTimeout(timer); resolve(b); });
-        } catch (e) { clearTimeout(timer); reject(e); }
+          pdfMake.createPdf(docDef).getBlob((b: Blob) => resolve(b));
+        } catch (e) { reject(e); }
       });
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
@@ -608,7 +607,9 @@ export default function ClientPage() {
         const fileName = `Informe_${safeIps}_${safeMun}.pdf`;
 
         try {
-          const reportData = mapToInformeDatos(resultsForPdf, ips, municipio, true);
+          // En bulk no incluimos anexo de estadios (demasiado pesado × 50 PDFs)
+          // El PDF Individual sí incluye todos los anexos
+          const reportData = mapToInformeDatos(resultsForPdf, ips, municipio, false);
           const docDef     = buildDocDefinition(reportData, images);
 
           const blob = await Promise.race([
@@ -616,9 +617,9 @@ export default function ClientPage() {
               try { pdfMake.createPdf(docDef).getBlob(resolve); }
               catch (e) { reject(e); }
             }),
-            // Timeout de seguridad por si pdfMake cuelga con algún PDF
+            // Timeout de seguridad: 90 s por PDF (sin anexo de estadios)
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout`)), 30_000)
+              setTimeout(() => reject(new Error(`Timeout 90s`)), 90_000)
             ),
           ]);
           zip.file(fileName, blob);
