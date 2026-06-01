@@ -350,6 +350,7 @@ export default function ClientPage() {
     // Listas de pacientes
     let inasistentes: InformeDatos['inasistentes'] = [];
     let sinEstadificar: InformeDatos['sinEstadificar'] = [];
+    let pacientesPorEstadio: InformeDatos['pacientesPorEstadio'] = { E1:[], E2:[], E3:[], E4:[], E5:[] };
 
     if (includePatientLists && rawRows.length > 0) {
       const relevantRows = (targetIps && targetMunicipio)
@@ -364,22 +365,34 @@ export default function ClientPage() {
         inasistentes = getInasistentesData(relevantRows, headerMap);
       }
 
-      // Sin estadificar
+      // Sin estadificar y pacientes por estadio TFG
       const idxEstadio = headerMap['estadio_tfg'];
       if (idxEstadio !== undefined && idxEstadio >= 0) {
-        sinEstadificar = relevantRows
-          .filter(row => {
-            const val = row[idxEstadio];
-            return val == null || String(val).trim() === '';
-          })
-          .map(row => ({
-            tipo_id:   String(row[headerMap['tipo_id']] ?? ''),
-            id:        String(row[headerMap['id']] ?? ''),
-            p_nombre:  String(row[headerMap['p_nombre']] ?? ''),
-            s_nombre:  String(row[headerMap['s_nombre']] ?? ''),
-            p_apellido: String(row[headerMap['p_apellido']] ?? ''),
-            s_apellido: String(row[headerMap['s_apellido']] ?? ''),
-          }));
+        const NORM_S = (s: any) => String(s ?? '').normalize('NFD').replace(/̀-ͯ/g,'').trim().toUpperCase();
+        const nombreCompleto = (row: any[]) =>
+          [row[headerMap['p_nombre']], row[headerMap['s_nombre']],
+           row[headerMap['p_apellido']], row[headerMap['s_apellido']]]
+          .map(v => String(v ?? '').trim()).filter(Boolean).join(' ')
+          + (row[headerMap['id']] ? ` — ${row[headerMap['id']]}` : '');
+
+        for (const row of relevantRows) {
+          const val = row[idxEstadio];
+          const est = NORM_S(val);
+          if (!val || String(val).trim() === '') {
+            sinEstadificar!.push({
+              tipo_id:    String(row[headerMap['tipo_id']] ?? ''),
+              id:         String(row[headerMap['id']] ?? ''),
+              p_nombre:   String(row[headerMap['p_nombre']] ?? ''),
+              s_nombre:   String(row[headerMap['s_nombre']] ?? ''),
+              p_apellido: String(row[headerMap['p_apellido']] ?? ''),
+              s_apellido: String(row[headerMap['s_apellido']] ?? ''),
+            });
+          } else if (est === 'ESTADIO 1' || est === 'ESTADIO I')   pacientesPorEstadio!.E1.push(nombreCompleto(row));
+            else if (est === 'ESTADIO 2' || est === 'ESTADIO II')  pacientesPorEstadio!.E2.push(nombreCompleto(row));
+            else if (est === 'ESTADIO 3' || est === 'ESTADIO III') pacientesPorEstadio!.E3.push(nombreCompleto(row));
+            else if (est === 'ESTADIO 4' || est === 'ESTADIO IV')  pacientesPorEstadio!.E4.push(nombreCompleto(row));
+            else if (est === 'ESTADIO 5' || est === 'ESTADIO V')   pacientesPorEstadio!.E5.push(nombreCompleto(row));
+        }
       }
     }
 
@@ -454,6 +467,7 @@ export default function ClientPage() {
       ],
       inasistentes,
       sinEstadificar,
+      pacientesPorEstadio,
     };
   }, [getInasistentesData, yearForPdf, monthForPdf]);
 

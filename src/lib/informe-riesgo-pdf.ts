@@ -18,6 +18,7 @@ export interface InformeDatos {
   calidadDato: string[]; observaciones: string[]; compromisos: string[];
   inasistentes?: Array<{ tipo_id: string; id: string; p_nombre: string; s_nombre: string; p_apellido: string; s_apellido: string; tel: string; dir: string; }>;
   sinEstadificar?: Array<{ tipo_id: string; id: string; p_nombre: string; s_nombre: string; p_apellido: string; s_apellido: string; }>;
+  pacientesPorEstadio?: { E1: string[]; E2: string[]; E3: string[]; E4: string[]; E5: string[]; };
 }
 
 /* ── helpers ── */
@@ -111,11 +112,15 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
         data.tablas.dmControlados.map(r => [TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.denom), TD(r.num), TD(r.pct)])
     )}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
 
-    /* 9 — Laboratorios */
+    /* 9 — Laboratorios (formato vertical: 1 fila por indicador) */
     H('COBERTURA DE LABORATORIOS TRAZADORES'),
-    { table: { headerRows:1, widths:[30,40,'*',24,26,26,26,26,26,26,26,26,26], body: rows(
-        [TH('DPTO'), TH('MUN'), TH('IPS'), TH('POB'), TH('CR\nTOT'), TH('CR\nVIG'), TH('CR\n%'), TH('HbA\nTOT'), TH('HbA\nVIG'), TH('HbA\n%'), TH('ALB\nTOT'), TH('ALB\nVIG'), TH('ALB\n%')],
-        data.tablas.laboratorios.map(r => [TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.creatDenom), TD(r.creatNum), TD(r.creatPct), TD(r.hba1cDenom), TD(r.hba1cNum), TD(r.hba1cPct), TD(r.microalbDenom), TD(r.microalbNum), TD(r.microalbPct)])
+    { table: { headerRows:1, widths:['*',50,55,55,50], body: rows(
+        [TH('IPS / MUNICIPIO'), TH('INDICADOR'), TH('TOTAL\nREGISTRADOS'), TH('VIGENTES\n(en rango)'), TH('%')],
+        data.tablas.laboratorios.flatMap(r => [
+          [TD(`${r.ips} — ${r.municipio}`,true), TD('Creatinina'),         TD(r.creatDenom),   TD(r.creatNum),   TD(r.creatPct)],
+          [TD('',true),                           TD('HbA1c (DM)'),         TD(r.hba1cDenom),   TD(r.hba1cNum),   TD(r.hba1cPct)],
+          [TD('',true),                           TD('Microalbuminuria'),    TD(r.microalbDenom),TD(r.microalbNum),TD(r.microalbPct)],
+        ])
     )}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
 
     /* 10-12 — Textos */
@@ -151,6 +156,34 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
           ...data.sinEstadificar.map(p => [TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true)]),
       ]}, layout:'lightHorizontalLines', margin:[0,0,0,8] }
     );
+  }
+
+  /* Anexo 3 — Pacientes por Estadio TFG */
+  const estadioLabels: Record<string, string> = {
+    E1: 'Estadio I  (TFG >= 90)',
+    E2: 'Estadio II (TFG 60-89)',
+    E3: 'Estadio III (TFG 30-59)',
+    E4: 'Estadio IV (TFG 15-29)',
+    E5: 'Estadio V  (TFG < 15)',
+  };
+  if (data.pacientesPorEstadio) {
+    const hayPacientes = Object.values(data.pacientesPorEstadio).some(arr => arr.length > 0);
+    if (hayPacientes) {
+      content.push(
+        { text: 'ANEXO 3 - PACIENTES POR ESTADIO TFG', style:'h1', margin:[0,0,0,6], pageBreak:'before' }
+      );
+      (Object.entries(estadioLabels) as [string, string][]).forEach(([key, label]) => {
+        const pats = (data.pacientesPorEstadio as any)[key] as string[];
+        if (!pats?.length) return;
+        content.push(
+          { text: label, bold:true, fontSize:10, margin:[0,8,0,4] },
+          { table: { headerRows:1, widths:[30,'*'], body: [
+              [TH('N°'), TH('PACIENTE')],
+              ...pats.map((nombre, i) => [TD(i+1), TD(nombre, true)]),
+          ]}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+        );
+      });
+    }
   }
 
   return {

@@ -47,15 +47,15 @@ const EXPECTED: { [key: string]: string[] } = {
     fecha_albuminuria: ['FECHA ALBUMINURIA'],
     estadio_tfg: ['ESTADIO  SEGÚN TFG', 'ESTADIO SEGÚN TFG'],
     
-    // Columns for Inasistentes table
-    tipo_id: ['TIPO ID'],
-    id: ['NUMERO DE IDENTIFICACION', 'NUMERO DE IDENTIFICACIÓN'],
-    p_nombre: ['PRIMER NOMBRE'],
-    s_nombre: ['SEGUNDO NOMBRE'],
-    p_apellido: ['PRIMER APELLIDO'],
-    s_apellido: ['SEGUNDO APELLIDO'],
-    tel: ['NUMERO DE TELEFONO'],
-    dir: ['DIRECCION', 'DIRECCIÓN DE RESIDENCIA'],
+    // Columns for Inasistentes table (múltiples variantes según fuente de datos)
+    tipo_id: ['TIPO ID', 'TI IDENTIFICION', 'TI IDENTIFICIÓN', 'TIPO DE IDENTIFICACION', 'TIPO IDENTIFICACION'],
+    id: ['NUMERO DE IDENTIFICACION', 'NUMERO DE IDENTIFICACIÓN', 'NúMERO DE IDENTIFICACIóN'],
+    p_nombre: ['PRIMER NOMBRE', 'PRI NOMBRE', 'NOMBRES', '1ER NOMBRE'],
+    s_nombre: ['SEGUNDO NOMBRE', 'SEG NOMBRE', '2DO NOMBRE'],
+    p_apellido: ['PRIMER APELLIDO', 'PRI APELLIDO', 'APELLIDOS', '1ER APELLIDO'],
+    s_apellido: ['SEGUNDO APELLIDO', 'SEG APELLIDO', '2DO APELLIDO'],
+    tel: ['NUMERO DE TELEFONO', 'NúMERO DE TELEFONO', 'CELULAR', 'TELEFONO', 'NUMERO DE CELULAR'],
+    dir: ['DIRECCION', 'DIRECCIÓN DE RESIDENCIA', 'DIRECCION DE RESIDENCIA', 'DIRECCIóN'],
 };
 
 
