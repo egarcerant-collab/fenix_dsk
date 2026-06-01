@@ -474,6 +474,15 @@ export default function ClientPage() {
       ]);
       const pdfMake = pdfMakeModule.default;
       pdfMake.vfs = pdfFontsModule.default;
+      // Registro explícito de fuentes — sin esto pdfMake 0.2.x espera indefinidamente
+      pdfMake.fonts = {
+        Roboto: {
+          normal:      'Roboto-Regular.ttf',
+          bold:        'Roboto-Medium.ttf',
+          italics:     'Roboto-Italic.ttf',
+          bolditalics: 'Roboto-MediumItalic.ttf',
+        },
+      };
       const images: PdfImages = { background: backgroundImg };
 
       // Determinar IPS y municipio según selección del dropdown
@@ -552,6 +561,15 @@ export default function ClientPage() {
       ]);
       const pdfMake = pdfMakeModule.default;
       pdfMake.vfs = pdfFontsModule.default;
+      // Registro explícito de fuentes — sin esto pdfMake 0.2.x espera indefinidamente
+      pdfMake.fonts = {
+        Roboto: {
+          normal:      'Roboto-Regular.ttf',
+          bold:        'Roboto-Medium.ttf',
+          italics:     'Roboto-Italic.ttf',
+          bolditalics: 'Roboto-MediumItalic.ttf',
+        },
+      };
       const images: PdfImages = { background: backgroundImg };
 
       // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
