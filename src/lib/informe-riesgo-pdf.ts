@@ -184,10 +184,12 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
     info: { title:`RCV ${c.monthName} ${c.year}`, author:'Dusakawi EPS' },
     defaultStyle: { fontSize:9, lineHeight:1.25, font:'Roboto' },
     styles: {},
-    /* CLAVE: fondo solo en pág 1 → 8-10x más rápido que en todas las páginas */
+    /* Imagen registrada UNA SOLA VEZ en el dict 'images' → referenciada por clave
+       en todas las páginas. pdfMake no re-procesa el base64 en cada página. */
+    images: images?.background ? { fondo: images.background } : undefined,
     background: (currentPage: number, pageSize: any) => {
-      if (currentPage !== 1 || !images?.background) return null;
-      return { image: images.background, width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 } };
+      if (!images?.background) return null;
+      return { image: 'fondo', width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 } };
     },
     content,
   };
