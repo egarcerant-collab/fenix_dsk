@@ -22,185 +22,150 @@ export interface InformeDatos {
 }
 
 /* ── helpers ── */
-const H  = (t: string)              => ({ text: t, style: 'h1',  margin: [0, 10, 0, 4] });
-const P  = (t: string)              => ({ text: t, style: 'p',   margin: [0, 0, 0, 4]  });
-const TH = (t: string)              => ({ text: String(t ?? ''), style: 'th', alignment: 'center', margin: [2, 3, 2, 3] });
-const TD = (t: any, left = false)   => ({ text: String(t ?? ''), style: 'td', alignment: left ? 'left' : 'center', margin: [2, 2, 2, 2] });
-const pct = (n: number, d: number)  => d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '0%';
+const H  = (t: string) => ({ text: t, bold: true, fontSize: 10, color: '#1a3a5c', margin: [0, 8, 0, 3] });
+const TH = (t: string) => ({ text: String(t ?? ''), bold: true, fontSize: 7.5, alignment: 'center' as const, margin: [1, 2, 1, 2] });
+const TD = (t: any, left = false) => ({ text: String(t ?? ''), fontSize: 7.5, alignment: (left ? 'left' : 'center') as const, margin: [1, 2, 1, 2] });
+const pct = (n: number, d: number) => d > 0 ? `${((n/d)*100).toFixed(1)}%` : '0%';
+const body = (header: any[], rows: any[][]) => rows.length > 0 ? [header, ...rows] : [header, [{ text: '-', colSpan: header.length, alignment: 'center' as const, fontSize: 7, margin: [1,2,1,2] }, ...Array(header.length - 1).fill({ text:'' }) ]];
 
-/* ── buildDocDefinition ── */
-export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any {
+export function buildDocDefinition(data: InformeDatos, _images?: PdfImages): any {
   const { corte: c, prevalencia: pr, analisisData: ad, kpisTFG: tfg, cumplimientos: cum } = data;
+  const content: any[] = [];
 
-  const rows = <T extends any[]>(header: any[], dataRows: T[]) =>
-    dataRows.length > 0 ? [header, ...dataRows] : [header];
+  /* ── Encabezado compact ── */
+  content.push(
+    { text: `EVALUACION INDICADORES RCV — ${c.monthName} ${c.year}`, bold: true, fontSize: 12, color: '#1a3a5c', margin: [0,0,0,4] },
+    { text: `IPS: ${data.encabezado.entidad}   |   Lugar/Fecha: ${data.encabezado.lugarFecha}`, fontSize: 8, margin: [0,0,0,8] }
+  );
 
-  const content: any[] = [
+  /* ── Resumen general ── */
+  content.push(
+    H('RESUMEN GENERAL'),
+    { table: { widths: ['*','*','*','*','*','*'], body: [
+        [TH('TOTAL PAC'), TH('SOLO HTA'), TH('SOLO DM'), TH('HTA+DM'), TH('ESTADIFICADOS'), TH('SIN ESTADIF.')],
+        [TD(ad.totalPacientes), TD(ad.soloHta), TD(ad.soloDm), TD(ad.htaDm), TD(ad.estadificados), TD(ad.sinEstadificarCount)],
+    ]}, layout: 'lightHorizontalLines', margin: [0,0,0,6] },
 
-    /* 1 — Encabezado */
-    { table: { widths: ['auto','*'], body: [
-        [{ text:'Proceso:',         bold:true, fontSize:9 }, { text: data.encabezado.proceso,    fontSize:9 }],
-        [{ text:'Formato:',         bold:true, fontSize:9 }, { text: data.encabezado.formato,    fontSize:9 }],
-        [{ text:'Entidad:',         bold:true, fontSize:9 }, { text: data.encabezado.entidad,    fontSize:9 }],
-        [{ text:'Vigencia:',        bold:true, fontSize:9 }, { text: data.encabezado.vigencia,   fontSize:9 }],
-        [{ text:'Lugar/Fecha:',     bold:true, fontSize:9 }, { text: data.encabezado.lugarFecha, fontSize:9 }],
-    ]}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
+    { table: { widths: [55,55,55,55,55,'*'], body: [
+        [TH('ESTADIO I'), TH('ESTADIO II'), TH('ESTADIO III'), TH('ESTADIO IV'), TH('ESTADIO V'), TH('SIN ESTADIF.')],
+        [TD(tfg.E1), TD(tfg.E2), TD(tfg.E3), TD(tfg.E4), TD(tfg.E5), TD(tfg.sinEstadificar)],
+    ]}, layout: 'lightHorizontalLines', margin: [0,0,0,8] }
+  );
 
-    /* 2 — Referencia */
-    H('REF. EVALUACION DATA ENFERMEDADES PRECURSORAS HTA - DM'),
-    P(`Posterior al analisis de la informacion reportada en la Data de Enfermedades Precursoras (HTA y DM) de los usuarios atendidos a corte ${c.monthName} ${c.year}, se realiza la evaluacion de indicadores de gestion del riesgo.`),
-
-    /* 3 — Prevalencia */
+  /* ── Prevalencia ── */
+  content.push(
     H('PREVALENCIA HTA Y DM'),
-    P(`Afiliados 18-69 anos: ${pr.poblacion1869}.  HTA estimados (22.8%): ${pr.htaEstimados} | Meta HTA (16.26%): ${pr.htaMeta}.  DM estimados (3.5%): ${pr.dmEstimados} | Meta DM (60%): ${pr.dmMeta}.  La IPSI reporta ${pr.htaReportados} pacientes con HTA y ${pr.dmReportados} con DM.`),
+    { text: `Poblacion 18-69: ${pr.poblacion1869} | HTA estimados (22.8%): ${pr.htaEstimados} | Meta HTA (16.26%): ${pr.htaMeta} | HTA reportados: ${pr.htaReportados}`, fontSize: 8, margin:[0,0,0,2] },
+    { text: `DM estimados (3.5%): ${pr.dmEstimados} | Meta DM (60%): ${pr.dmMeta} | DM reportados: ${pr.dmReportados}`, fontSize: 8, margin:[0,0,0,8] }
+  );
 
-    /* 4 — Analisis Data */
-    H('ANALISIS DE DATA HTA - DM'),
-    { ul: [
-        `Total pacientes: ${ad.totalPacientes}`,
-        `Solo HTA: ${ad.soloHta}   |   Solo DM: ${ad.soloDm}   |   HTA + DM: ${ad.htaDm}`,
-        `Estadificados TFG: ${ad.estadificados}   |   Sin Estadificar: ${ad.sinEstadificarCount}`,
-    ], style:'p', margin:[0,0,0,6] },
+  /* ── TABLA MAESTRA de indicadores ── */
+  content.push(H('INDICADORES DE GESTION DEL RIESGO'));
 
-    /* Tabla TFG */
-    { table: { headerRows:1, widths:['*',70], body: [
-        [TH('ESTADIO'), TH(c.monthName)],
-        [TD('Estadio I  (TFG >= 90)',  true), TD(tfg.E1)],
-        [TD('Estadio II (TFG 60-89)',  true), TD(tfg.E2)],
-        [TD('Estadio III (TFG 30-59)', true), TD(tfg.E3)],
-        [TD('Estadio IV (TFG 15-29)',  true), TD(tfg.E4)],
-        [TD('Estadio V  (TFG < 15)',   true), TD(tfg.E5)],
-        [{ text:'SIN ESTADIFICAR', style:'td', bold:true }, { text:String(tfg.sinEstadificar), style:'td', bold:true, alignment:'center' }],
-        [{ text:'TOTAL CON ESTADIO', style:'td', bold:true }, { text:String(tfg.total), style:'td', bold:true, alignment:'center' }],
-    ]}, layout:'lightHorizontalLines', margin:[0,4,0,6] },
+  // Construir filas de una sola tabla consolidada
+  const indRows: any[][] = [];
+  for (const r of data.tablas.captacionHTA) {
+    indRows.push([
+      TD(r.ips, true), TD(r.municipio),
+      TD(r.htaCasos), TD(r.htaMeta), TD(r.htaPctMeta),
+      TD(r.dmCasos), TD(r.dmMeta), TD(r.dmPctMeta),
+    ]);
+  }
+  // Agregar mayores/menores y DM/labs si misma IPS
+  if (data.tablas.htaMayoresMenores.length > 0) {
+    const hm = data.tablas.htaMayoresMenores[0];
+    const dc = data.tablas.dmControlados[0];
+    const lb = data.tablas.laboratorios[0];
+    content.push(
+      { table: { headerRows:1, widths:['*',50, 32,32,32, 32,32,32], body: body(
+          [TH('IPS'), TH('MUNICIPIO'), TH('HTA\nCASOS'), TH('META\nHTA'), TH('%\nHTA'), TH('DM\nCASOS'), TH('META\nDM'), TH('%\nDM')],
+          indRows
+      )}, layout:'lightHorizontalLines', margin:[0,0,0,4] },
 
-    P(`Creatinina: ${cum.creatNum} de ${cum.creatDenom} vigentes (${cum.range12}) = ${pct(cum.creatNum, cum.creatDenom)}.`),
-    P(`HbA1c: ${cum.hba1cNum} de ${cum.hba1cDenom} en semestre (${cum.range6}) = ${pct(cum.hba1cNum, cum.hba1cDenom)}.`),
-    P(`Microalbuminuria: ${cum.microalbNum} de ${cum.microalbDenom} vigentes (${cum.range12}) = ${pct(cum.microalbNum, cum.microalbDenom)}.`),
-    P(`Inasistentes a control: ${cum.inasistentesCount} usuarios. Ver ANEXO 1.`),
+      { table: { headerRows:1, widths:['*', 32,32,32, 32,32,32], body: body(
+          [TH('IPS'), TH('HTA>=60\nCTRL'), TH('HTA>=60\n%'), TH('HTA<60\nCTRL'), TH('HTA<60\n%'), TH('DM\nCTRL'), TH('DM\n%')],
+          [[TD(hm.ips, true), TD(hm.may60Num), TD(hm.may60Pct), TD(hm.men60Num), TD(hm.men60Pct), TD(dc?.num??''), TD(dc?.pct??'')]]
+      )}, layout:'lightHorizontalLines', margin:[0,0,0,4] },
 
-    /* 5 — Captacion HTA */
-    H('INDICADOR DE CAPTACION PARA HIPERTENSION'),
-    { table: { headerRows:1, widths:[40,50,'*',32,32,32,35,32,32], body: rows(
-        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB\n18-69'), TH('PREV\n22.8%'), TH('META\n16.26%'), TH('CASOS\nHTA'), TH('%\nvs META'), TH('%\nvs PREV')],
-        data.tablas.captacionHTA.map(r => [TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.htaEst), TD(r.htaMeta), TD(r.htaCasos), TD(r.htaPctMeta), TD(r.htaPctPrev)])
-    )}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
+      H('COBERTURA LABORATORIOS TRAZADORES'),
+      { table: { widths: ['*','*','*'], body: [
+          [TH('CREATININA'), TH('HbA1c (DM)'), TH('MICROALBUMINURIA')],
+          [TD(`${lb?.creatNum??0} de ${lb?.creatDenom??0} = ${lb?.creatPct??'0%'}`), TD(`${lb?.hba1cNum??0} de ${lb?.hba1cDenom??0} = ${lb?.hba1cPct??'0%'}`), TD(`${lb?.microalbNum??0} de ${lb?.microalbDenom??0} = ${lb?.microalbPct??'0%'}`)],
+      ]}, layout:'lightHorizontalLines', margin:[0,0,0,4] }
+    );
+  } else {
+    content.push(
+      { table: { headerRows:1, widths:['*',50, 32,32,32, 32,32,32], body: body(
+          [TH('IPS'), TH('MUNICIPIO'), TH('HTA\nCASOS'), TH('META\nHTA'), TH('%\nHTA'), TH('DM\nCASOS'), TH('META\nDM'), TH('%\nDM')],
+          indRows
+      )}, layout:'lightHorizontalLines', margin:[0,0,0,8] }
+    );
+  }
 
-    /* 6 — Captacion DM */
-    H('INDICADOR DE CAPTACION PARA DIABETES MELLITUS'),
-    { table: { headerRows:1, widths:[40,50,'*',32,32,32,35,32,32], body: rows(
-        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB\n18-69'), TH('PREV\n3.5%'), TH('META\n60%'), TH('CASOS\nDM'), TH('%\nvs META'), TH('%\nvs PREV')],
-        data.tablas.captacionDM.map(r => [TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.dmEst), TD(r.dmMeta), TD(r.dmCasos), TD(r.dmPctMeta), TD(r.dmPctPrev)])
-    )}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
+  /* ── Cumplimientos ── */
+  content.push(
+    H('CUMPLIMIENTOS LABORATORIOS'),
+    { text: `Creatinina: ${cum.creatNum}/${cum.creatDenom} = ${pct(cum.creatNum,cum.creatDenom)} (${cum.range12})`, fontSize: 8, margin:[0,0,0,2] },
+    { text: `HbA1c: ${cum.hba1cNum}/${cum.hba1cDenom} = ${pct(cum.hba1cNum,cum.hba1cDenom)} (${cum.range6})`, fontSize: 8, margin:[0,0,0,2] },
+    { text: `Microalbuminuria: ${cum.microalbNum}/${cum.microalbDenom} = ${pct(cum.microalbNum,cum.microalbDenom)} | Inasistentes: ${cum.inasistentesCount} usuarios`, fontSize: 8, margin:[0,0,0,6] }
+  );
 
-    /* 7 — HTA Mayores / Menores */
-    H('INDICADOR HTA MAYORES Y MENORES DE 60 ANOS'),
-    { table: { headerRows:1, widths:[38,48,'*',28,30,30,28,30,30,28], body: rows(
-        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB'), TH('>=60\nDEN'), TH('>=60\nCTRL'), TH('>=60\n%'), TH('<60\nDEN'), TH('<60\nCTRL'), TH('<60\n%')],
-        data.tablas.htaMayoresMenores.map(r => [TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.may60Denom), TD(r.may60Num), TD(r.may60Pct), TD(r.men60Denom), TD(r.men60Num), TD(r.men60Pct)])
-    )}, layout:'lightHorizontalLines', margin:[0,0,0,6] },
+  /* ── Observaciones breves ── */
+  if (data.observaciones.length > 0) {
+    content.push(
+      H('OBSERVACIONES'),
+      { ul: data.observaciones.slice(0,10).map(t => ({ text: t, fontSize: 7.5 })), margin:[0,0,0,4] }
+    );
+  }
 
-    ...(data.analisisComportamiento.length ? [
-      { text:'Analisis del Comportamiento:', bold:true, fontSize:10, margin:[0,4,0,2] },
-      { ul: data.analisisComportamiento.map(t => ({ text:t, fontSize:9 })), margin:[0,0,0,8] },
-    ] : []),
-
-    /* 8 — DM Controlados */
-    H('INDICADOR DE DIABETICOS CONTROLADOS'),
-    { table: { headerRows:1, widths:[45,55,'*',38,48,52,38], body: rows(
-        [TH('DPTO'), TH('MUNICIPIO'), TH('IPS'), TH('POB'), TH('PAC.\nCON DM'), TH('DM\nCONTROLADOS'), TH('%')],
-        data.tablas.dmControlados.map(r => [TD(r.dpto), TD(r.municipio), TD(r.ips,true), TD(r.poblacion), TD(r.denom), TD(r.num), TD(r.pct)])
-    )}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
-
-    /* 9 — Laboratorios (formato vertical: 1 fila por indicador) */
-    H('COBERTURA DE LABORATORIOS TRAZADORES'),
-    { table: { headerRows:1, widths:['*',50,55,55,50], body: rows(
-        [TH('IPS / MUNICIPIO'), TH('INDICADOR'), TH('TOTAL\nREGISTRADOS'), TH('VIGENTES\n(en rango)'), TH('%')],
-        data.tablas.laboratorios.flatMap(r => [
-          [TD(`${r.ips} — ${r.municipio}`,true), TD('Creatinina'),         TD(r.creatDenom),   TD(r.creatNum),   TD(r.creatPct)],
-          [TD('',true),                           TD('HbA1c (DM)'),         TD(r.hba1cDenom),   TD(r.hba1cNum),   TD(r.hba1cPct)],
-          [TD('',true),                           TD('Microalbuminuria'),    TD(r.microalbDenom),TD(r.microalbNum),TD(r.microalbPct)],
-        ])
-    )}, layout:'lightHorizontalLines', margin:[0,0,0,8] },
-
-    /* 10-12 — Textos */
-    H('Calidad del Dato'),
-    data.calidadDato.length ? { ul: data.calidadDato.map(t => ({ text:t, style:'p' })), margin:[0,0,0,6] } : P('Sin observaciones.'),
-
-    H('Observaciones'),
-    data.observaciones.length ? { ul: data.observaciones.map(t => ({ text:t, style:'p' })), margin:[0,0,0,6] } : P('Sin observaciones especificas.'),
-
-    H('Compromisos y Acciones'),
-    data.compromisos.length ? { ul: data.compromisos.map(t => ({ text:t, style:'p' })), margin:[0,0,0,6] } : P('Compromisos por definir.'),
-
-    { text:'Elaborado por: Profesional PYM - Ruta Cardiovascular y Metabolica - Direccion del Riesgo en Salud', fontSize:8, italics:true, margin:[0,12,0,0] },
-  ];
-
-  /* Anexo 1 — Inasistentes */
+  /* ── ANEXO 1: Inasistentes ── */
   if (data.inasistentes?.length) {
     content.push(
-      { text:'ANEXO 1 - PACIENTES INASISTENTES A CONTROL', style:'h1', margin:[0,0,0,6], pageBreak:'before' },
+      { text: 'ANEXO 1 - PACIENTES INASISTENTES A CONTROL', bold:true, fontSize:9, color:'#1a3a5c', margin:[0,8,0,3], pageBreak:'before' },
       { table: { headerRows:1, widths:[26,50,50,50,50,50,40,'*'], body: [
           [TH('TIPO'), TH('ID'), TH('1er NOMBRE'), TH('2do NOMBRE'), TH('1er APELLIDO'), TH('2do APELLIDO'), TH('TEL'), TH('DIR')],
           ...data.inasistentes.map(p => [TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true), TD(p.tel), TD(p.dir,true)]),
-      ]}, layout:'lightHorizontalLines', margin:[0,0,0,8] }
+      ]}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
     );
   }
 
-  /* Anexo 2 — Sin Estadificar */
+  /* ── ANEXO 2: Sin Estadificar ── */
   if (data.sinEstadificar?.length) {
     content.push(
-      { text:'ANEXO 2 - PACIENTES PENDIENTES DE ESTADIFICACION TFG', style:'h1', margin:[0,0,0,6], pageBreak:'before' },
+      { text: 'ANEXO 2 - PENDIENTES DE ESTADIFICACION TFG', bold:true, fontSize:9, color:'#1a3a5c', margin:[0,8,0,3] },
       { table: { headerRows:1, widths:[30,58,'*','*','*','*'], body: [
           [TH('TIPO'), TH('ID'), TH('1er NOMBRE'), TH('2do NOMBRE'), TH('1er APELLIDO'), TH('2do APELLIDO')],
           ...data.sinEstadificar.map(p => [TD(p.tipo_id), TD(p.id), TD(p.p_nombre,true), TD(p.s_nombre,true), TD(p.p_apellido,true), TD(p.s_apellido,true)]),
-      ]}, layout:'lightHorizontalLines', margin:[0,0,0,8] }
+      ]}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
     );
   }
 
-  /* Anexo 3 — Pacientes por Estadio TFG */
-  const estadioLabels: Record<string, string> = {
-    E1: 'Estadio I  (TFG >= 90)',
-    E2: 'Estadio II (TFG 60-89)',
-    E3: 'Estadio III (TFG 30-59)',
-    E4: 'Estadio IV (TFG 15-29)',
-    E5: 'Estadio V  (TFG < 15)',
-  };
+  /* ── ANEXO 3: Pacientes por estadio (solo si se pide) ── */
   if (data.pacientesPorEstadio) {
-    const hayPacientes = Object.values(data.pacientesPorEstadio).some(arr => arr.length > 0);
-    if (hayPacientes) {
-      content.push(
-        { text: 'ANEXO 3 - PACIENTES POR ESTADIO TFG', style:'h1', margin:[0,0,0,6], pageBreak:'before' }
-      );
-      (Object.entries(estadioLabels) as [string, string][]).forEach(([key, label]) => {
-        const pats = (data.pacientesPorEstadio as any)[key] as string[];
-        if (!pats?.length) return;
+    const labels: [string, string][] = [['E1','Estadio I (TFG>=90)'],['E2','Estadio II (TFG 60-89)'],['E3','Estadio III (TFG 30-59)'],['E4','Estadio IV (TFG 15-29)'],['E5','Estadio V (TFG<15)']];
+    const hayPac = labels.some(([k]) => (data.pacientesPorEstadio as any)[k]?.length > 0);
+    if (hayPac) {
+      content.push({ text: 'ANEXO 3 - PACIENTES POR ESTADIO TFG', bold:true, fontSize:9, color:'#1a3a5c', margin:[0,8,0,3], pageBreak:'before' });
+      for (const [key, label] of labels) {
+        const pats: string[] = (data.pacientesPorEstadio as any)[key] ?? [];
+        if (!pats.length) continue;
         content.push(
-          { text: label, bold:true, fontSize:10, margin:[0,8,0,4] },
-          { table: { headerRows:1, widths:[30,'*'], body: [
-              [TH('N°'), TH('PACIENTE')],
-              ...pats.map((nombre, i) => [TD(i+1), TD(nombre, true)]),
-          ]}, layout:'lightHorizontalLines', margin:[0,0,0,6] }
+          { text: `${label} — ${pats.length} pacientes`, bold:true, fontSize:8, margin:[0,6,0,2] },
+          { table: { headerRows:1, widths:[20,'*'], body: [
+              [TH('N'), TH('NOMBRE — ID')],
+              ...pats.map((n,i)=>[TD(i+1),TD(n,true)]),
+          ]}, layout:'lightHorizontalLines', margin:[0,0,0,4] }
         );
-      });
+      }
     }
   }
 
   return {
     pageSize: 'A4',
-    pageMargins: [50, 85, 50, 65],
-    info: { title:`Evaluacion RCV - ${c.monthName} ${c.year}`, author:'Dusakawi EPS' },
-    defaultStyle: { fontSize:10, lineHeight:1.3, font:'Roboto' },
-    styles: {
-      h1: { bold:true, fontSize:11, color:'#1a3a5c' },
-      p:  { fontSize:10 },
-      th: { bold:true, fontSize:8 },
-      td: { fontSize:8 },
-    },
-    background: (currentPage: number, pageSize: any) => {
-      if (!images?.background) return null;
-      return { image: images.background, width: pageSize.width, height: pageSize.height, absolutePosition:{ x:0, y:0 } };
-    },
+    pageMargins: [45, 45, 45, 45],
+    info: { title: `RCV ${c.monthName} ${c.year} — ${data.encabezado.entidad}` },
+    defaultStyle: { fontSize: 8, lineHeight: 1.2, font: 'Roboto' },
+    styles: { },
     content,
   };
 }
@@ -211,5 +176,4 @@ export async function descargarInformePDF(datos: InformeDatos, images?: PdfImage
   (pdfMake as any).vfs = vfsFonts;
   pdfMake.createPdf(buildDocDefinition(datos, images)).download(nombre);
 }
-
 export async function registerArialIfAvailable(_pdfMake: any) {}

@@ -486,8 +486,8 @@ export default function ClientPage() {
       const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
       pdfMake.vfs = pdfFonts;
 
-      const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
-      const images: PdfImages = { background: backgroundImg };
+      // Sin imagen de fondo — es el principal cuello de botella (se renderiza en cada página)
+      const images: PdfImages = { background: '' };
 
       // Determinar IPS y municipio según selección del dropdown
       let targetIps: string | undefined;
@@ -569,8 +569,8 @@ export default function ClientPage() {
       const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
       pdfMake.vfs = pdfFonts;
 
-      const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
-      const images: PdfImages = { background: backgroundImg };
+      // Sin imagen de fondo para velocidad (cuello de botella principal)
+      const images: PdfImages = { background: '' };
 
       // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
       // Evita filtrar 10K filas por cada IPS en el bucle (era O(n × k))
