@@ -52,6 +52,7 @@ export default function ClientPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{done:number;total:number}|null>(null);
 
 
   const fetchFiles = useCallback(() => {
@@ -458,81 +459,103 @@ export default function ClientPage() {
 
 
  const handleBulkGeneratePdf = async () => {
-    // 1. Verificación Inicial
     if (!lastResults) {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
     }
     setIsGeneratingPdf(true);
-    toast({ title: 'Generando PDFs Masivos...', description: 'Esto puede tardar varios minutos. No cierre la ventana.' });
+    setPdfProgress(null);
 
-    // 2. Preparación del Entorno
     const zip = new JSZip();
     const monthName = new Date(yearForPdf, monthForPdf - 1).toLocaleString('es', { month: 'long' });
+    const hm = lastResults.headerMap;
 
-    // El contenido del PDF se genera automáticamente desde los KPIs — sin IA externa.
-    
-    // 2.b. Inicialización de pdfmake una sola vez para mejorar el rendimiento.
-    const pdfMake = (await import("pdfmake/build/pdfmake")).default;
-    const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
-    pdfMake.vfs = pdfFonts;
-    
     try {
-        // 2.c. Carga de la imagen de fondo una sola vez.
-        const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
-        const images: PdfImages = { background: backgroundImg };
-      
-        const uniqueGroups = [...new Map(lastResults.groupedData.map(item => [`${item.keys.ips}|${item.keys.municipio}`, item])).values()];
+      // ── A. Cargar pdfMake e imagen UNA SOLA VEZ ──────────────────────────
+      const [pdfMakeModule, pdfFontsModule, backgroundImg] = await Promise.all([
+        import('pdfmake/build/pdfmake'),
+        import('pdfmake/build/vfs_fonts'),
+        loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg'),
+      ]);
+      const pdfMake = pdfMakeModule.default;
+      pdfMake.vfs = pdfFontsModule.default;
+      const images: PdfImages = { background: backgroundImg };
 
-        // 3. Iteración por cada Grupo (IPS y Municipio)
-        for (const group of uniqueGroups) {
-            const { ips, municipio } = group.keys;
-            toast({ title: `Generando: ${ips} - ${municipio}`, description: 'Por favor, espere...' });
-            
-            // 3.a. Aislamiento de los datos del grupo actual.
-             const resultsForPdf: DataProcessingResult = {
-                ...lastResults,
-                R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
-                rawRows: lastResults.rawRows, // Asegúrate de pasar las filas crudas para los inasistentes
-                headerMap: lastResults.headerMap
-            };
+      // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
+      // Evita filtrar 10K filas por cada IPS en el bucle (era O(n × k))
+      const rowIndex = new Map<string, any[][]>();
+      for (const row of lastResults.rawRows) {
+        const key = `${String(row[hm['ips']] ?? '').toUpperCase().trim()}|${String(row[hm['municipio']] ?? '').toUpperCase().trim()}`;
+        if (!rowIndex.has(key)) rowIndex.set(key, []);
+        rowIndex.get(key)!.push(row);
+      }
 
-            // 3.b. Construcción del objeto de datos para el PDF con nuevo esquema completo.
-            const reportData = mapToInformeDatos(resultsForPdf, ips, municipio, true);
-            
-            // 3.c. Creación de la estructura del documento PDF.
-            const docDefinition = buildDocDefinition(reportData, images);
+      // ── C. Lista única de IPS/Municipio ─────────────────────────────────
+      const uniqueGroups = [...new Map(
+        lastResults.groupedData.map(g => [`${g.keys.ips}|${g.keys.municipio}`, g])
+      ).values()];
+      const total = uniqueGroups.length;
+      setPdfProgress({ done: 0, total });
 
-            // 3.d. Creación del PDF en memoria como un Blob.
-            const pdfDoc = pdfMake.createPdf(docDefinition);
-            const pdfBlob = await new Promise<Blob>((resolve) => {
-                pdfDoc.getBlob((blob) => resolve(blob));
-            });
+      // ── D. Pre-calcular TODOS los docDefinitions (CPU, sin I/O) ─────────
+      const tasks = uniqueGroups.map(group => {
+        const { ips, municipio } = group.keys;
+        const resultsForPdf: DataProcessingResult = {
+          ...lastResults,
+          R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
+          rawRows: rowIndex.get(`${ips}|${municipio}`) ?? [],   // ya filtrado
+          headerMap: hm,
+        };
+        const reportData  = mapToInformeDatos(resultsForPdf, ips, municipio, true);
+        const docDef      = buildDocDefinition(reportData, images);
+        const safeIps     = ips.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9]/g, '_');
+        const safeMun     = municipio.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9]/g, '_');
+        const fileName    = `Informe_${safeIps}_${safeMun}.pdf`;
+        return { docDef, fileName };
+      });
 
-            // 3.e. Adición del PDF al archivo ZIP.
-            const fileName = `Informe_${ips.replace(/\s/g, '_')}_${municipio.replace(/\s/g, '_')}.pdf`;
-            zip.file(fileName, pdfBlob);
-        }
+      // ── E. Renderizar en lotes de 5 en paralelo ──────────────────────────
+      const BATCH = 5;
+      let done = 0;
+      for (let i = 0; i < tasks.length; i += BATCH) {
+        const batch = tasks.slice(i, i + BATCH);
+        await Promise.all(
+          batch.map(({ docDef, fileName }) =>
+            new Promise<void>(resolve => {
+              pdfMake.createPdf(docDef).getBlob(blob => {
+                zip.file(fileName, blob);
+                resolve();
+              });
+            })
+          )
+        );
+        done += batch.length;
+        setPdfProgress({ done, total });
+        // Ceder el hilo al navegador entre lotes para evitar freeze
+        await new Promise(r => setTimeout(r, 0));
+      }
 
-        // 4. Finalización y Descarga del ZIP
-        toast({ title: 'Comprimiendo archivos...', description: 'Preparando la descarga del archivo ZIP.' });
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Informes_Masivos_${monthName}_${yearForPdf}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-
-        toast({ title: 'Éxito', description: 'La descarga del archivo ZIP ha comenzado.' });
+      // ── F. Comprimir y descargar (nivel 1 = rápido) ──────────────────────
+      setPdfProgress({ done: total, total });
+      const zipBlob = await zip.generateAsync({
+        type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 },
+      });
+      const url = URL.createObjectURL(zipBlob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = `Informes_Masivos_${monthName}_${yearForPdf}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: '✅ Descarga iniciada', description: `${total} PDFs generados correctamente.` });
 
     } catch (error: any) {
-        console.error("Error generando el ZIP de PDFs:", error);
-        toast({ title: 'Error', description: error?.message || 'No se pudo generar el archivo ZIP.', variant: 'destructive' });
+      console.error('Error generando ZIP:', error);
+      toast({ title: 'Error', description: error?.message || 'No se pudo generar el archivo ZIP.', variant: 'destructive' });
     } finally {
-        setIsGeneratingPdf(false);
+      setIsGeneratingPdf(false);
+      setPdfProgress(null);
     }
   };
 
@@ -1134,7 +1157,12 @@ export default function ClientPage() {
                                 <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
                                      <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
                                         {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
-                                        {isGeneratingPdf ? 'Generando...' : 'Masivo PDF'}</Button>
+                                        {isGeneratingPdf
+                                          ? pdfProgress
+                                            ? `PDF ${pdfProgress.done}/${pdfProgress.total}…`
+                                            : 'Preparando…'
+                                          : 'Masivo PDF'}
+                                      </Button>
                                 </div>
                             </div>
                         </div>
