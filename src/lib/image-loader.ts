@@ -1,28 +1,19 @@
 
-'use server';
-
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
+// Carga una imagen desde /public usando fetch del browser
+// (reemplaza el 'use server' + fs.readFile que falla en Vercel)
 export async function loadImageAsBase64(imagePath: string): Promise<string> {
   try {
-    const fullPath = path.join(process.cwd(), 'public', imagePath);
-    const fileBuffer = await fs.readFile(fullPath);
-    const base64Data = fileBuffer.toString('base64');
-    
-    let mimeType = 'image/jpeg';
-    if(imagePath.endsWith('.png')) {
-      mimeType = 'image/png';
-    } else if (imagePath.endsWith('.jpg') || imagePath.endsWith('.jpeg')) {
-      mimeType = 'image/jpeg';
-    } else if (imagePath.endsWith('.gif')) {
-      mimeType = 'image/gif';
-    }
-
-    return `data:${mimeType};base64,${base64Data}`;
+    const response = await fetch(imagePath);
+    if (!response.ok) return '';
+    const blob = await response.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror   = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
   } catch (error) {
-    console.error(`Error loading image from ${imagePath}:`, error);
-    // Return a transparent pixel as a fallback
-    return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    console.error(`Error cargando imagen ${imagePath}:`, error);
+    return '';
   }
 }
