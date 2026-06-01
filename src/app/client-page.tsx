@@ -26,12 +26,13 @@ import { Toaster } from '@/components/ui/toaster';
 
 // Make XLSX global if it's loaded from a script
 declare global {
-  interface Window { XLSX: any; }
+  interface Window { XLSX: any; pdfMake: any; }
 }
 
 export default function ClientPage() {
   const { toast } = useToast();
   const [xlsxLoaded, setXlsxLoaded] = useState(false);
+  const [pdfmakeReady, setPdfmakeReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -464,25 +465,15 @@ export default function ClientPage() {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
     }
+    if (!pdfmakeReady || !window.pdfMake) {
+      toast({ title: 'Espere', description: 'pdfMake aún se está cargando. Reintente en unos segundos.', variant: 'default' });
+      return;
+    }
     setIsGeneratingSinglePdf(true);
+    const pdfMake = window.pdfMake;   // CDN global — sin imports dinámicos
 
     try {
-      const [pdfMakeModule, pdfFontsModule, backgroundImg] = await Promise.all([
-        import('pdfmake/build/pdfmake'),
-        import('pdfmake/build/vfs_fonts'),
-        loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg'),
-      ]);
-      const pdfMake = pdfMakeModule.default;
-      pdfMake.vfs = pdfFontsModule.default;
-      // Registro explícito de fuentes — sin esto pdfMake 0.2.x espera indefinidamente
-      pdfMake.fonts = {
-        Roboto: {
-          normal:      'Roboto-Regular.ttf',
-          bold:        'Roboto-Medium.ttf',
-          italics:     'Roboto-Italic.ttf',
-          bolditalics: 'Roboto-MediumItalic.ttf',
-        },
-      };
+      const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       const images: PdfImages = { background: backgroundImg };
 
       // Determinar IPS y municipio según selección del dropdown
@@ -526,11 +517,9 @@ export default function ClientPage() {
         ? `Informe_${targetIps.replace(/[^a-zA-Z0-9]/g,'_')}_${targetMun?.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`
         : `Informe_Consolidado_${MONTHS[monthForPdf-1]}_${yearForPdf}.pdf`;
 
-      await new Promise<void>((resolve, reject) => {
-        try { pdfMake.createPdf(docDef).download(fileName, resolve); }
-        catch (e) { reject(e); }
-      });
-      toast({ title: 'PDF descargado', description: fileName });
+      // download() sin callback — CDN dispara la descarga directamente
+      pdfMake.createPdf(docDef).download(fileName);
+      toast({ title: 'PDF descargando…', description: fileName });
 
     } catch (err: any) {
       console.error('Error PDF individual:', err);
@@ -553,23 +542,14 @@ export default function ClientPage() {
     const hm = lastResults.headerMap;
 
     try {
-      // ── A. Cargar pdfMake e imagen UNA SOLA VEZ ──────────────────────────
-      const [pdfMakeModule, pdfFontsModule, backgroundImg] = await Promise.all([
-        import('pdfmake/build/pdfmake'),
-        import('pdfmake/build/vfs_fonts'),
-        loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg'),
-      ]);
-      const pdfMake = pdfMakeModule.default;
-      pdfMake.vfs = pdfFontsModule.default;
-      // Registro explícito de fuentes — sin esto pdfMake 0.2.x espera indefinidamente
-      pdfMake.fonts = {
-        Roboto: {
-          normal:      'Roboto-Regular.ttf',
-          bold:        'Roboto-Medium.ttf',
-          italics:     'Roboto-Italic.ttf',
-          bolditalics: 'Roboto-MediumItalic.ttf',
-        },
-      };
+      // ── A. Usar pdfMake del CDN global (ya cargado con fuentes) ──────────
+      if (!pdfmakeReady || !window.pdfMake) {
+        toast({ title: 'Espere', description: 'pdfMake aún se está cargando.', variant: 'default' });
+        setIsGeneratingPdf(false);
+        return;
+      }
+      const pdfMake = window.pdfMake;
+      const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       const images: PdfImages = { background: backgroundImg };
 
       // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
@@ -962,6 +942,16 @@ export default function ClientPage() {
         src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
         strategy="lazyOnload"
         onLoad={() => setXlsxLoaded(true)}
+      />
+      {/* pdfMake desde CDN — igual que XLSX, así funciona sin problemas de VFS/fuentes */}
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"
+        strategy="lazyOnload"
+      />
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"
+        strategy="lazyOnload"
+        onLoad={() => setPdfmakeReady(true)}
       />
       <Toaster />
       <div className="min-h-screen bg-background text-foreground font-sans">
