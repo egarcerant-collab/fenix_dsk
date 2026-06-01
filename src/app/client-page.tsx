@@ -497,53 +497,53 @@ export default function ClientPage() {
       const total = uniqueGroups.length;
       setPdfProgress({ done: 0, total });
 
-      // ── D. Pre-calcular TODOS los docDefinitions (CPU, sin I/O) ─────────
-      const tasks = uniqueGroups.map(group => {
+      // ── D. Generar PDFs de uno en uno — construir docDef sobre la marcha ──
+      // NO se pre-calculan los 50 docDefs en memoria simultáneamente.
+      // Cada iteración construye y renderiza un solo PDF, luego libera memoria.
+      let skipped = 0;
+      for (let i = 0; i < uniqueGroups.length; i++) {
+        const group = uniqueGroups[i];
         const { ips, municipio } = group.keys;
+
         const resultsForPdf: DataProcessingResult = {
           ...lastResults,
           R: { ...group.results, TOTAL_FILAS: group.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
-          rawRows: rowIndex.get(`${ips}|${municipio}`) ?? [],   // ya filtrado
+          rawRows: rowIndex.get(`${ips}|${municipio}`) ?? [],
           headerMap: hm,
         };
-        const reportData  = mapToInformeDatos(resultsForPdf, ips, municipio, true);
-        const docDef      = buildDocDefinition(reportData, images);
-        const safeIps     = ips.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9]/g, '_');
-        const safeMun     = municipio.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9]/g, '_');
-        const fileName    = `Informe_${safeIps}_${safeMun}.pdf`;
-        return { docDef, fileName };
-      });
+        const safeIps  = ips.replace(/[^a-zA-Z0-9]/g, '_');
+        const safeMun  = municipio.replace(/[^a-zA-Z0-9]/g, '_');
+        const fileName = `Informe_${safeIps}_${safeMun}.pdf`;
 
-      // ── E. Renderizar uno a uno con yield entre cada PDF ─────────────────
-      // pdfMake no es thread-safe: paralelizarlo lo congela. Se genera de a
-      // uno, cediendo el hilo al navegador (setTimeout 0) para mantener la
-      // UI respondiendo y actualizar el contador en tiempo real.
-      let skipped = 0;
-      for (let i = 0; i < tasks.length; i++) {
-        const { docDef, fileName } = tasks[i];
         try {
+          const reportData = mapToInformeDatos(resultsForPdf, ips, municipio, true);
+          const docDef     = buildDocDefinition(reportData, images);
+
           const blob = await Promise.race([
             new Promise<Blob>((resolve, reject) => {
-              try {
-                pdfMake.createPdf(docDef).getBlob(resolve);
-              } catch (e) { reject(e); }
+              try { pdfMake.createPdf(docDef).getBlob(resolve); }
+              catch (e) { reject(e); }
             }),
-            // Timeout de seguridad: si pdfMake cuelga >20 s, pasar al siguiente
+            // Timeout de seguridad por si pdfMake cuelga con algún PDF
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout: ${fileName}`)), 20_000)
+              setTimeout(() => reject(new Error(`Timeout`)), 30_000)
             ),
           ]);
           zip.file(fileName, blob);
         } catch (pdfErr: any) {
+          // Guardar el error como .txt para que el usuario vea qué falló
+          const msg = `Error: ${pdfErr?.message ?? pdfErr}\nIPS: ${ips}\nMunicipio: ${municipio}`;
+          zip.file(fileName.replace('.pdf', '_ERROR.txt'), msg);
           console.warn(`PDF omitido (${fileName}):`, pdfErr?.message);
           skipped++;
         }
+
         setPdfProgress({ done: i + 1, total });
-        // Ceder al event loop → React actualiza el DOM y el navegador no se congela
+        // Ceder al event loop → React actualiza contador, browser no se congela
         await new Promise(r => setTimeout(r, 0));
       }
       if (skipped > 0) {
-        toast({ title: `⚠️ ${skipped} PDF(s) omitidos`, description: 'Ver consola para detalle.', variant: 'default' });
+        toast({ title: `${skipped} PDF(s) omitidos`, description: 'El ZIP incluye archivos _ERROR.txt con el detalle.', variant: 'default' });
       }
 
       // ── F. Comprimir y descargar (nivel 1 = rápido) ──────────────────────
