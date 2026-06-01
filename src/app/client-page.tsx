@@ -465,7 +465,7 @@ export default function ClientPage() {
       toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
       return;
     }
-    if (!pdfmakeReady || !window.pdfMake) {
+    if (!pdfmakeReady || !window.pdfMake?.createPdf) {
       toast({ title: 'Espere', description: 'pdfMake aún se está cargando. Reintente en unos segundos.', variant: 'default' });
       return;
     }
@@ -553,7 +553,7 @@ export default function ClientPage() {
 
     try {
       // ── A. Usar pdfMake del CDN global (ya cargado con fuentes) ──────────
-      if (!pdfmakeReady || !window.pdfMake) {
+      if (!pdfmakeReady || !window.pdfMake?.createPdf) {
         toast({ title: 'Espere', description: 'pdfMake aún se está cargando.', variant: 'default' });
         setIsGeneratingPdf(false);
         return;
@@ -953,15 +953,17 @@ export default function ClientPage() {
         strategy="lazyOnload"
         onLoad={() => setXlsxLoaded(true)}
       />
-      {/* pdfMake desde CDN — igual que XLSX, así funciona sin problemas de VFS/fuentes */}
+      {/* pdfMake: cargar pdfmake primero, luego vfs_fonts dentro de onLoad para garantizar orden */}
       <Script
+        id="pdfmake-core"
         src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"
         strategy="lazyOnload"
-      />
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"
-        strategy="lazyOnload"
-        onLoad={() => setPdfmakeReady(true)}
+        onLoad={() => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js';
+          s.onload = () => setPdfmakeReady(true);
+          document.head.appendChild(s);
+        }}
       />
       <Toaster />
       <div className="min-h-screen bg-background text-foreground font-sans">
