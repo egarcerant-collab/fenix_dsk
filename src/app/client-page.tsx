@@ -53,6 +53,7 @@ export default function ClientPage() {
   
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false);
   const [pdfProgress, setPdfProgress] = useState<{done:number;total:number}|null>(null);
+  const [isGeneratingSinglePdf, setIsGeneratingSinglePdf] = useState(false);
 
 
   const fetchFiles = useCallback(() => {
@@ -457,6 +458,78 @@ export default function ClientPage() {
   }, [getInasistentesData, yearForPdf, monthForPdf]);
 
 
+
+ const handleSinglePdf = async () => {
+    if (!lastResults) {
+      toast({ title: 'Error', description: 'Primero procese un archivo.', variant: 'destructive' });
+      return;
+    }
+    setIsGeneratingSinglePdf(true);
+
+    try {
+      const [pdfMakeModule, pdfFontsModule, backgroundImg] = await Promise.all([
+        import('pdfmake/build/pdfmake'),
+        import('pdfmake/build/vfs_fonts'),
+        loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg'),
+      ]);
+      const pdfMake = pdfMakeModule.default;
+      pdfMake.vfs = pdfFontsModule.default;
+      const images: PdfImages = { background: backgroundImg };
+
+      // Determinar IPS y municipio según selección del dropdown
+      let targetIps: string | undefined;
+      let targetMun: string | undefined;
+      let targetGroup: typeof lastResults.groupedData[0] | undefined;
+
+      if (selectedIpsForPdf !== 'all') {
+        const [ips, mun] = selectedIpsForPdf.split('|');
+        targetIps = ips;
+        targetMun = mun;
+        targetGroup = lastResults.groupedData.find(
+          g => g.keys.ips === targetIps && g.keys.municipio === targetMun
+        );
+      }
+
+      // Construir resultsForPdf
+      const hm = lastResults.headerMap;
+      let resultsForPdf: DataProcessingResult;
+      if (targetGroup) {
+        const rowsForIps = lastResults.rawRows.filter(row =>
+          String(row[hm['ips']] ?? '').toUpperCase().trim() === targetIps &&
+          String(row[hm['municipio']] ?? '').toUpperCase().trim() === targetMun
+        );
+        resultsForPdf = {
+          ...lastResults,
+          R: { ...targetGroup.results, TOTAL_FILAS: targetGroup.rowCount, FALTANTES_ENCABEZADOS: lastResults.R.FALTANTES_ENCABEZADOS },
+          rawRows: rowsForIps,
+          headerMap: hm,
+        };
+      } else {
+        // Consolidado
+        resultsForPdf = lastResults;
+      }
+
+      const reportData = mapToInformeDatos(resultsForPdf, targetIps, targetMun, true);
+      const docDef     = buildDocDefinition(reportData, images);
+
+      const MONTHS = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+      const fileName = targetIps
+        ? `Informe_${targetIps.replace(/[^a-zA-Z0-9]/g,'_')}_${targetMun?.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`
+        : `Informe_Consolidado_${MONTHS[monthForPdf-1]}_${yearForPdf}.pdf`;
+
+      await new Promise<void>((resolve, reject) => {
+        try { pdfMake.createPdf(docDef).download(fileName, resolve); }
+        catch (e) { reject(e); }
+      });
+      toast({ title: 'PDF descargado', description: fileName });
+
+    } catch (err: any) {
+      console.error('Error PDF individual:', err);
+      toast({ title: 'Error', description: err?.message || 'No se pudo generar el PDF.', variant: 'destructive' });
+    } finally {
+      setIsGeneratingSinglePdf(false);
+    }
+  };
 
  const handleBulkGeneratePdf = async () => {
     if (!lastResults) {
@@ -1166,13 +1239,26 @@ export default function ClientPage() {
                                     </SelectContent>
                                 </Select>
                                 <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                                     <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf} className="w-full">
+                                     {/* Botón PDF individual */}
+                                     <Button
+                                       onClick={handleSinglePdf}
+                                       variant="outline"
+                                       disabled={isGeneratingSinglePdf || isGeneratingPdf}
+                                       className="w-full sm:w-auto"
+                                     >
+                                       {isGeneratingSinglePdf
+                                         ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                         : <FileDown className="mr-2 h-4 w-4" />}
+                                       {isGeneratingSinglePdf ? 'Generando…' : 'PDF Individual'}
+                                     </Button>
+                                     {/* Botón masivo ZIP */}
+                                     <Button onClick={handleBulkGeneratePdf} variant="secondary" disabled={isGeneratingPdf || isGeneratingSinglePdf} className="w-full sm:w-auto">
                                         {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4"/>}
                                         {isGeneratingPdf
                                           ? pdfProgress
                                             ? `PDF ${pdfProgress.done}/${pdfProgress.total}…`
                                             : 'Preparando…'
-                                          : 'Masivo PDF'}
+                                          : 'Masivo ZIP'}
                                       </Button>
                                 </div>
                             </div>
