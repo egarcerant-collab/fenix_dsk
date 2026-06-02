@@ -486,8 +486,10 @@ export default function ClientPage() {
       const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
       pdfMake.vfs = pdfFonts;
 
-      // Sin imagen de fondo — es el principal cuello de botella (se renderiza en cada página)
-      const images: PdfImages = { background: '' };
+      const { FONDO_B64 } = await import('@/lib/fondo-b64');
+      console.log('[PDF SINGLE] FONDO_B64 length:', FONDO_B64?.length);
+      toast({ title: `Fondo cargado: ${FONDO_B64?.length ?? 0} bytes`, description: FONDO_B64?.substring(0,20) });
+      const images: PdfImages = { background: FONDO_B64 };
 
       // Determinar IPS y municipio según selección del dropdown
       let targetIps: string | undefined;
@@ -571,6 +573,8 @@ export default function ClientPage() {
 
       const { FONDO_B64 } = await import('@/lib/fondo-b64');
       const backgroundImg = FONDO_B64;
+      console.log('[PDF BULK] FONDO_B64 length:', backgroundImg?.length, '| starts:', backgroundImg?.substring(0,30));
+      toast({ title: `Fondo: ${backgroundImg?.length ? backgroundImg.length + ' bytes OK' : 'VACIO'}`, description: backgroundImg?.substring(0,20) });
       const images: PdfImages = { background: backgroundImg };
 
       // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
