@@ -607,9 +607,11 @@ export default function ClientPage() {
           rawRows: rowIndex.get(`${ips}|${municipio}`) ?? [],
           headerMap: hm,
         };
-        const safeIps  = ips.replace(/[^a-zA-Z0-9]/g, '_');
-        const safeMun  = municipio.replace(/[^a-zA-Z0-9]/g, '_');
-        const fileName = `Informe_${safeIps}_${safeMun}.pdf`;
+        const safeIps  = ips.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim();
+        const safeDpto = group.keys.dpto.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim() || 'SIN_DPTO';
+        const safeMun2 = municipio.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim() || 'SIN_MUNICIPIO';
+        // Estructura: DEPARTAMENTO/MUNICIPIO/Informe_IPS.pdf
+        const fileName = `${safeDpto}/${safeMun2}/Informe_${safeIps}.pdf`;
 
         try {
           // En bulk no incluimos anexo de estadios (demasiado pesado × 50 PDFs)
@@ -631,7 +633,7 @@ export default function ClientPage() {
         } catch (pdfErr: any) {
           // Guardar el error como .txt para que el usuario vea qué falló
           const msg = `Error: ${pdfErr?.message ?? pdfErr}\nIPS: ${ips}\nMunicipio: ${municipio}`;
-          zip.file(fileName.replace('.pdf', '_ERROR.txt'), msg);
+          zip.file(fileName.replace('.pdf', '_ERROR.txt'), msg);   // misma carpeta dpto/mun
           console.warn(`PDF omitido (${fileName}):`, pdfErr?.message);
           skipped++;
         }
