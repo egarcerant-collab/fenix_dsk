@@ -571,9 +571,7 @@ export default function ClientPage() {
       pdfMake.vfs = pdfFonts;
       pdfMake.fonts = { Roboto: { normal:'Roboto-Regular.ttf', bold:'Roboto-Medium.ttf', italics:'Roboto-Italic.ttf', bolditalics:'Roboto-MediumItalic.ttf' } };
 
-      // Imagen embebida directamente en el código — 100% confiable sin fetch ni server actions
-      const { FONDO_B64 } = await import('@/lib/fondo-b64');
-      const backgroundImg = FONDO_B64;
+      const backgroundImg = await loadImageAsBase64('/imagenes pdf/IMAGENEN UNIFICADA.jpg');
       const images: PdfImages = { background: backgroundImg };
 
       // ── B. Índice de filas por IPS|Municipio — construido UNA SOLA VEZ O(n) ─
