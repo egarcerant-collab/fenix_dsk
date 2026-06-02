@@ -1,24 +1,17 @@
-'use server';
-
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
+// Carga imagen desde /public — browser fetch con encoding correcto para espacios en path
 export async function loadImageAsBase64(imagePath: string): Promise<string> {
   try {
-    const fullPath = path.join(process.cwd(), 'public', imagePath);
-    const fileBuffer = await fs.readFile(fullPath);
-    const base64Data = fileBuffer.toString('base64');
-
-    let mimeType = 'image/jpeg';
-    if (imagePath.endsWith('.png')) {
-      mimeType = 'image/png';
-    } else if (imagePath.endsWith('.jpg') || imagePath.endsWith('.jpeg')) {
-      mimeType = 'image/jpeg';
-    }
-
-    return `data:${mimeType};base64,${base64Data}`;
-  } catch (error) {
-    console.error(`Error loading image from ${imagePath}:`, error);
+    // Codificar cada segmento del path para manejar espacios correctamente
+    const encoded = imagePath.split('/').map(s => encodeURIComponent(s)).join('/');
+    const response = await fetch(encoded);
+    if (!response.ok) return '';
+    const blob = await response.blob();
+    return new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
     return '';
   }
 }
