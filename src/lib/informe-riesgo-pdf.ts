@@ -184,9 +184,10 @@ export function buildDocDefinition(data: InformeDatos, images?: PdfImages): any 
     info: { title:`RCV ${c.monthName} ${c.year}`, author:'Dusakawi EPS' },
     defaultStyle: { fontSize:9, lineHeight:1.25, font:'Roboto' },
     styles: {},
+    images: images?.background ? { fondoInst: images.background } : undefined,
     background: (currentPage: number, pageSize: any) => {
       if (!images?.background) return null;
-      return { image: images.background, width: pageSize.width, height: pageSize.height, absolutePosition: { x: 0, y: 0 }, opacity: 1 };
+      return { image: 'fondoInst', width: pageSize.width, height: pageSize.height, absolutePosition: { x: 0, y: 0 }, opacity: 1 };
     },
     content,
   };
