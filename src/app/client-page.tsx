@@ -485,6 +485,7 @@ export default function ClientPage() {
       const pdfMake = (await import('pdfmake/build/pdfmake')).default;
       const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
       pdfMake.vfs = pdfFonts;
+      pdfMake.fonts = { Roboto: { normal:'Roboto-Regular.ttf', bold:'Roboto-Medium.ttf', italics:'Roboto-Italic.ttf', bolditalics:'Roboto-MediumItalic.ttf' } };
 
       // Sin imagen de fondo — es el principal cuello de botella (se renderiza en cada página)
       const images: PdfImages = { background: '' };
@@ -568,6 +569,7 @@ export default function ClientPage() {
       const pdfMake = (await import('pdfmake/build/pdfmake')).default;
       const pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
       pdfMake.vfs = pdfFonts;
+      pdfMake.fonts = { Roboto: { normal:'Roboto-Regular.ttf', bold:'Roboto-Medium.ttf', italics:'Roboto-Italic.ttf', bolditalics:'Roboto-MediumItalic.ttf' } };
 
       // Imagen embebida directamente en el código — 100% confiable sin fetch ni server actions
       const { FONDO_B64 } = await import('@/lib/fondo-b64');
