@@ -331,12 +331,22 @@ export async function processDataFile(
         throw new Error(`Faltan columnas clave para la agrupación (Departamento, IPS, Municipio). Columnas faltantes: ${missingRequired.join(', ')}`);
     }
 
-    const { R, issues, groupedData } = computeMetrics(data.rows, headerMap, range6m, range12m, populationMap, onProgress);
+    // Filtrar filas completamente vacías (sin dpto, sin ID, sin nombre)
+    const idIdx   = headerMap['id']   ?? -1;
+    const dptoIdx = headerMap['dpto'] ?? -1;
+    const nomIdx  = headerMap['p_nombre'] ?? -1;
+    const cleanRows = data.rows.filter(r =>
+        String(r[dptoIdx] ?? '').trim() ||
+        String(r[idIdx]   ?? '').trim() ||
+        String(r[nomIdx]  ?? '').trim()
+    );
+
+    const { R, issues, groupedData } = computeMetrics(cleanRows, headerMap, range6m, range12m, populationMap, onProgress);
 
     const finalR = { ...R, FALTANTES_ENCABEZADOS: missing };
 
     onProgress(100, 'Cálculo completado.');
-    return { R: finalR, issues, headers: data.headers, rawRows: data.rows, groupedData, headerMap };
+    return { R: finalR, issues, headers: data.headers, rawRows: cleanRows, groupedData, headerMap };
 }
 
 export async function processRawData(
