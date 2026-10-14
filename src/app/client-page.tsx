@@ -604,8 +604,14 @@ export default function ClientPage() {
           headerMap: hm,
         };
         const safeIps  = ips.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim();
-        const safeDpto = group.keys.dpto.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim() || 'SIN_DPTO';
-        const safeMun2 = municipio.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim() || 'SIN_MUNICIPIO';
+        const rawDpto = group.keys.dpto.trim().toUpperCase();
+        const safeDpto = (rawDpto === 'N/A' || rawDpto === 'NA' || rawDpto === 'N_A' || !rawDpto)
+          ? 'SIN_DEPARTAMENTO'
+          : rawDpto.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim() || 'SIN_DEPARTAMENTO';
+        const rawMun = municipio.trim().toUpperCase();
+        const safeMun2 = (rawMun === 'N/A' || rawMun === 'NA' || !rawMun)
+          ? 'SIN_MUNICIPIO'
+          : rawMun.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 ]/g, '_').trim() || 'SIN_MUNICIPIO';
         // Estructura: DEPARTAMENTO/MUNICIPIO/Informe_IPS.pdf
         const fileName = `${safeDpto}/${safeMun2}/Informe_${safeIps}.pdf`;
 
